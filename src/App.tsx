@@ -32,7 +32,7 @@ import {
   X,
 } from 'lucide-react';
 import { AriaAvatar, AriaWorkspace, IssueActionView } from './AriaWorkflow';
-import { initialIssues, issueLabels, phaseLabels, statuses, taskPlan } from './data';
+import { initialIssues, phaseLabels, statuses, taskPlan } from './data';
 import type { Issue, Phase, Priority, Run } from './data';
 
 import { CreateIssue } from './CreateIssue';
@@ -40,25 +40,24 @@ import { IssueList } from './IssueList';
 import {
   ChildIssues,
   IssueLabels,
-  LabelPicker,
-  ParentFields,
+  WorkTypePicker,
   StatusBadge,
   SecondaryBadge,
   useIssueMotion,
 } from './IssueHierarchy';
 import {
   ancestors,
-  association,
   hasLabel,
-  labelsOf,
   migrateIssues,
+  planningContext,
+  workTypeOf,
+  workTypeChanges,
   newIssueData,
   reconcileApprovedWork,
   searchIssue,
   uid,
   validateIssue,
 } from './issueModel';
-const STORAGE = 'cc-studio-issues-batch1';
 const seed = () => {
   const base = initialIssues.map((i) => ({
     ...i,
@@ -93,24 +92,6 @@ const seed = () => {
     login,
   ]);
 };
-function loadIssues(): Issue[] {
-  try {
-    const saved = localStorage.getItem(STORAGE);
-    const legacy = localStorage.getItem('cc-studio-issues-v2');
-    const value = JSON.parse(saved || legacy || 'null');
-    if (
-      Array.isArray(value) &&
-      value.every((i) => typeof i.id === 'number' && typeof i.title === 'string')
-    ) {
-      if (!saved && legacy && !localStorage.getItem('cc-studio-issues-v2-before-batch1'))
-        localStorage.setItem('cc-studio-issues-v2-before-batch1', legacy);
-      return migrateIssues(value);
-    }
-    return seed();
-  } catch {
-    return seed();
-  }
-}
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
 function Source({ source }: { source: Issue['source'] }) {
   return (
@@ -164,7 +145,7 @@ export default function App() {
       window.removeEventListener('popstate', onHashChange);
     };
   }, []);
-  const [issues, setIssues] = useState<Issue[]>(loadIssues);
+  const [issues, setIssues] = useState<Issue[]>(seed);
   const [issueView, setIssueView] = useState<'list' | 'board'>(() => {
     try {
       return localStorage.getItem('cc-studio-issue-view') === 'board' ? 'board' : 'list';
@@ -202,30 +183,13 @@ export default function App() {
     return () => mm.revert();
   }, [tab, issueView]);
   const [status, setStatus] = useState('All');
-  const [source, setSource] = useState('All sources');
   const [query, setQuery] = useState('');
-  const [epicFilter, setEpicFilter] = useState('');
-  const [storyFilter, setStoryFilter] = useState('');
-  const [labelFilter, setLabelFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [listPage, setListPage] = useState(1);
-  const [groupBy, setGroupBy] = useState(() => {
-    try {
-      return localStorage.getItem('cc-studio-group-by') || 'None';
-    } catch {
-      return 'None';
-    }
-  });
   useEffect(() => {
     setListPage(1);
-  }, [status, source, query, epicFilter, storyFilter, labelFilter, groupBy]);
+  }, [status, query, typeFilter]);
   const [createParent, setCreateParent] = useState<number | undefined>();
-  useEffect(() => {
-    try {
-      localStorage.setItem('cc-studio-group-by', groupBy);
-    } catch {
-      /* Session preference remains available. */
-    }
-  }, [groupBy]);
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(() => {
     const match = window.location.hash.match(/^#issues\/(\d+)(?:\/aria)?$/);
@@ -249,7 +213,6 @@ export default function App() {
   const [history, setHistory] = useState(false);
   const [featureSearch, setFeatureSearch] = useState('');
   const [featureView, setFeatureView] = useState('Accepted');
-  const [saved, setSaved] = useState(true);
   const searchRef = useRef<HTMLInputElement>(null);
   const selected = issues.find((i) => i.id === selectedId);
   const openIssue = (id: number) => {
@@ -305,14 +268,6 @@ export default function App() {
     setIssues((prev) =>
       prev.map((i) => (i.id === id && i.run ? { ...i, run: { ...i.run, ...changes } } : i)),
     );
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE, JSON.stringify(issues));
-      setSaved(true);
-    } catch {
-      setSaved(false);
-    }
-  }, [issues]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(''), 3800);
@@ -397,13 +352,10 @@ export default function App() {
       issues.filter(
         (i) =>
           (status === 'All' || i.status === status) &&
-          (source === 'All sources' || i.source === source) &&
-          (!epicFilter || association(i, issues, 'Epic')?.id === Number(epicFilter)) &&
-          (!storyFilter || association(i, issues, 'Story')?.id === Number(storyFilter)) &&
-          (!labelFilter || hasLabel(i, labelFilter)) &&
+          (!typeFilter || workTypeOf(i) === typeFilter) &&
           searchIssue(i, issues, query),
       ),
-    [issues, status, source, query, epicFilter, storyFilter, labelFilter],
+    [issues, status, query, typeFilter],
   );
   const makeRun = (issue: Issue, instructions: string): Run => {
     const work = issue.workItems || [];
@@ -412,6 +364,7 @@ export default function App() {
       id: uid(),
       planId: uid(),
       phase: 'analyzing',
+      planningContext: planningContext(issue, issues),
       instructions,
       mode: 'preview',
       step: 0,
@@ -425,7 +378,7 @@ export default function App() {
               title: w.title,
               detail: w.description,
               subtasks: w.subtasks.map((s) => s.title),
-              agent: w.assignee || 'Aria',
+              agent: 'Aria',
               enabled: true,
             }))
         : hasChildren
@@ -494,11 +447,8 @@ export default function App() {
   };
   const clearFilters = () => {
     setQuery('');
-    setSource('All sources');
     setStatus('All');
-    setEpicFilter('');
-    setStoryFilter('');
-    setLabelFilter('');
+    setTypeFilter('');
   };
   const existingAction = (name: string) => setNotice(`${name} is unavailable right now.`);
   const openTicket = (id: number) => {
@@ -943,73 +893,15 @@ export default function App() {
                   )}
                 </label>
                 <select
-                  aria-label="Filter by creation source"
-                  value={source}
-                  onChange={(e) => setSource(e.target.value)}
+                  aria-label="Filter by type"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
                 >
-                  <option>All sources</option>
-                  <option value="Studio">Created in CC Studio</option>
-                  <option value="GitLab">Created in GitLab</option>
-                </select>
-                <select
-                  aria-label="Filter by Epic"
-                  value={epicFilter}
-                  onChange={(e) => {
-                    setEpicFilter(e.target.value);
-                    setStoryFilter('');
-                  }}
-                >
-                  <option value="">All Epics</option>
-                  {issues
-                    .filter((i) => hasLabel(i, 'Epic'))
-                    .map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {i.title}
-                      </option>
-                    ))}
-                </select>
-                <select
-                  aria-label="Filter by Story"
-                  value={storyFilter}
-                  onChange={(e) => setStoryFilter(e.target.value)}
-                >
-                  <option value="">All Stories</option>
-                  {issues
-                    .filter(
-                      (i) =>
-                        hasLabel(i, 'Story') &&
-                        (!epicFilter || i.parentIssueId === Number(epicFilter)),
-                    )
-                    .map((i) => (
-                      <option key={i.id} value={i.id}>
-                        {i.title}
-                      </option>
-                    ))}
-                </select>
-                <select
-                  aria-label="Filter by label"
-                  value={labelFilter}
-                  onChange={(e) => setLabelFilter(e.target.value)}
-                >
-                  <option value="">All labels</option>
-                  {[...new Set([...issueLabels, ...issues.flatMap(labelsOf)])].map((label) => (
-                    <option key={label}>{label}</option>
+                  <option value="">All types</option>
+                  {['Issue', 'Story', 'Epic'].map((type) => (
+                    <option key={type}>{type}</option>
                   ))}
                 </select>
-                {issueView === 'list' && (
-                  <label className="cc-group-control">
-                    Group by
-                    <select
-                      aria-label="Group by"
-                      value={groupBy}
-                      onChange={(e) => setGroupBy(e.target.value)}
-                    >
-                      {['None', 'Epic', 'Story'].map((g) => (
-                        <option key={g}>{g}</option>
-                      ))}
-                    </select>
-                  </label>
-                )}
                 <span className="cc-filtered-count">{filtered.length} issues</span>
                 <div className="cc-view-toggle" role="group" aria-label="Issue view">
                   <button
@@ -1052,7 +944,7 @@ export default function App() {
                   onPage={setListPage}
                   issues={filtered}
                   allIssues={issues}
-                  groupBy={groupBy}
+                  groupBy="None"
                   onOpen={openIssue}
                   onFix={openAria}
                   onTicket={openTicket}
@@ -1071,11 +963,6 @@ export default function App() {
         </main>
       </div>
       <footer className="cc-footer">© 2026 CodeConductorAI, Inc.</footer>
-      {!saved && (
-        <div className="cc-storage-warning">
-          Changes are available for this session only; browser storage is unavailable.
-        </div>
-      )}
       {createOpen && (
         <CreateIssue
           issues={issues}
@@ -1206,9 +1093,6 @@ function IssueDetails({
           </label>
         </div>
         <div className="cc-organize-line">
-          <span>
-            Assigned to <strong>{issue.assignee || 'Unassigned'}</strong>
-          </span>
           {ancestors(issue, issues)
             .filter((p) => hasLabel(p, 'Epic') || hasLabel(p, 'Story'))
             .map((p) => (
@@ -1224,36 +1108,15 @@ function IssueDetails({
             onClick={() => setOrganizing(!organizing)}
             aria-expanded={organizing}
           >
-            Edit labels & relationships
+            Edit properties
           </button>
         </div>
         {organizing && (
           <div className="cc-organize-editor">
-            <LabelPicker
-              value={labelsOf(issue)}
-              extra={issues.flatMap(labelsOf)}
-              onChange={(labels) =>
-                onChange({
-                  labels,
-                  label: labels[0] || '',
-                  parentIssueId: labels.includes('Epic') ? null : issue.parentIssueId,
-                })
-              }
+            <WorkTypePicker
+              value={workTypeOf(issue)}
+              onChange={(type) => onChange(workTypeChanges(issue, type, issues))}
             />
-            <ParentFields
-              issue={issue}
-              issues={issues}
-              onChange={(parentIssueId) => onChange({ parentIssueId })}
-            />
-            <label>
-              Assignee
-              <input
-                aria-label="Issue assignee"
-                value={issue.assignee}
-                placeholder="Unassigned"
-                onChange={(e) => onChange({ assignee: e.target.value })}
-              />
-            </label>
           </div>
         )}
       </header>

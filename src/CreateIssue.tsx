@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Plus, Sparkles } from 'lucide-react';
 import type { Issue, Priority } from './data';
 import { AriaAvatar, Modal } from './AriaWorkflow';
-import { LabelPicker, ParentFields } from './IssueHierarchy';
-import { hasLabel, hierarchyKind, labelsOf, newIssueData, validateIssue } from './issueModel';
+import { WorkTypePicker } from './IssueHierarchy';
+import { workTypeOf, workTypeChanges, newIssueData, validateIssue } from './issueModel';
 export function CreateIssue({
   issues,
   parentId,
@@ -16,7 +16,7 @@ export function CreateIssue({
   onCreate: (issue: Issue, plan: boolean) => void;
 }) {
   const [draft, setDraft] = useState<Issue>(() => ({
-    ...newIssueData(Math.max(0, ...issues.map((i) => i.id)) + 1, ''),
+    ...newIssueData(Math.max(0, ...issues.map((i) => i.id)) + 1, '', []),
     parentIssueId: parentId ?? null,
   }));
   const [error, setError] = useState('');
@@ -71,29 +71,16 @@ export function CreateIssue({
               onChange={(e) => patch({ description: e.target.value })}
             />
           </label>
-          <LabelPicker
-            value={labelsOf(draft)}
-            extra={issues.flatMap(labelsOf)}
-            onChange={(labels) => {
-              const next = { ...draft, labels, label: labels[0] || '' };
-              patch({
-                labels,
-                label: labels[0] || '',
-                parentIssueId:
-                  hierarchyKind(next) === 'Epic'
-                    ? null
-                    : hierarchyKind(next) === 'Story' &&
-                        !issues.some((i) => i.id === draft.parentIssueId && hasLabel(i, 'Epic'))
-                      ? null
-                      : draft.parentIssueId,
-              });
-            }}
+          <WorkTypePicker
+            value={workTypeOf(draft)}
+            onChange={(type) => patch(workTypeChanges(draft, type, issues))}
           />
-          <ParentFields
-            issue={draft}
-            issues={issues}
-            onChange={(parentIssueId) => patch({ parentIssueId })}
-          />
+          {draft.parentIssueId && (
+            <p className="cc-inherited-parent">
+              Under #{draft.parentIssueId} ·{' '}
+              {issues.find((issue) => issue.id === draft.parentIssueId)?.title}
+            </p>
+          )}
           <div className="cc-form-pair">
             <label>
               Priority
@@ -105,21 +92,6 @@ export function CreateIssue({
                 {['High', 'Medium', 'Low'].map((p) => (
                   <option key={p}>{p}</option>
                 ))}
-              </select>
-            </label>
-            <label>
-              Assignee
-              <select
-                aria-label="Assignee"
-                value={draft.assignee}
-                onChange={(e) => patch({ assignee: e.target.value })}
-              >
-                <option value="">Unassigned</option>
-                {[...new Set(['Aria', ...issues.map((i) => i.assignee).filter(Boolean)])].map(
-                  (a) => (
-                    <option key={a}>{a}</option>
-                  ),
-                )}
               </select>
             </label>
           </div>

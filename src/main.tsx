@@ -8,6 +8,7 @@ import App from './App';
 import './workflow.css';
 import './styles.css';
 import './issues.css';
+import './issue-polish.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

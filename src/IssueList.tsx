@@ -1,15 +1,8 @@
 import { Fragment, useMemo, useState } from 'react';
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
-  Gitlab,
-  Sparkles,
-} from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Sparkles } from 'lucide-react';
 import type { Issue } from './data';
-import { ancestors, association } from './issueModel';
-import { IssueLabels, SecondaryBadge, StatusBadge, useIssueMotion } from './IssueHierarchy';
+import { ancestors, association, workTypeOf, secondaryStatus } from './issueModel';
+import { SecondaryBadge, StatusBadge, useIssueMotion } from './IssueHierarchy';
 import { AriaAction } from './AriaAction';
 export function IssueList({
   issues,
@@ -95,25 +88,21 @@ export function IssueList({
                 >
                   <ChevronDown size={14} className={expanded ? '' : 'closed'} />
                 </button>
-              ) : (
-                <span className="cc-tree-spacer" />
-              )}
+              ) : null}
               <div>
                 <button className="cc-issue-title" onClick={() => onOpen(issue.id)}>
                   <small>#{issue.id}</small> {issue.title}
                 </button>
-                <div className="cc-issue-subline">
-                  <IssueLabels issue={issue} />
-                  <span className={`cc-priority ${issue.priority.toLowerCase()}`}>
-                    {issue.priority}
-                  </span>
-                  {allChildren.length > 0 && (
-                    <span className="cc-child-count">
-                      {allChildren.filter((i) => i.status === 'Completed').length}/
-                      {allChildren.length} children
-                    </span>
-                  )}
-                </div>
+                {allChildren.length > 0 && (
+                  <div className="cc-issue-subline">
+                    {allChildren.length > 0 && (
+                      <span className="cc-child-count">
+                        {allChildren.filter((i) => i.status === 'Completed').length}/
+                        {allChildren.length} children
+                      </span>
+                    )}
+                  </div>
+                )}
                 {groupBy === 'None' && issue.parentIssueId && (
                   <button className="cc-list-parent" onClick={() => onOpen(issue.parentIssueId!)}>
                     {ancestors(issue, allIssues)
@@ -126,18 +115,17 @@ export function IssueList({
           </td>
           <td>
             <StatusBadge issue={issue} />
-            <SecondaryBadge issue={issue} />
+            {secondaryStatus(issue) !== 'Awaiting verification' && <SecondaryBadge issue={issue} />}
           </td>
           <td>
-            <span className="cc-source">
-              {issue.source === 'Studio' ? (
-                '∞ CC Studio'
-              ) : (
-                <>
-                  <Gitlab size={13} />
-                  GitLab
-                </>
-              )}
+            <span className={`cc-type ${workTypeOf(issue).toLowerCase()}`}>
+              {workTypeOf(issue)}
+            </span>
+          </td>
+          <td>
+            <span className={`cc-priority cc-table-priority ${issue.priority.toLowerCase()}`}>
+              <i aria-hidden="true" />
+              {issue.priority}
             </span>
           </td>
           <td>
@@ -153,7 +141,7 @@ export function IssueList({
         {expanded && children.map((child) => row(child, depth + 1, groupItems, visited))}
         {groupBy === 'None' && expanded && allChildren.length > 0 && (
           <tr className="cc-child-preview">
-            <td colSpan={5}>
+            <td colSpan={6}>
               <div>
                 {allChildren.map((child) => (
                   <button key={child.id} onClick={() => onOpen(child.id)}>
@@ -178,7 +166,8 @@ export function IssueList({
             <tr>
               <th>Issue</th>
               <th>Status</th>
-              <th>Created in</th>
+              <th>Type</th>
+              <th>Priority</th>
               <th>GitLab ticket</th>
               <th>
                 <Sparkles size={13} /> Aria
@@ -195,7 +184,7 @@ export function IssueList({
                 <Fragment key={group.key}>
                   {groupBy !== 'None' && (
                     <tr className="cc-group-row">
-                      <td colSpan={5}>
+                      <td colSpan={6}>
                         <button aria-expanded={expanded} onClick={() => toggle(`g-${group.key}`)}>
                           <ChevronDown size={15} className={expanded ? '' : 'closed'} />
                           <span className={`cc-type ${groupBy.toLowerCase()}`}>{groupBy}</span>

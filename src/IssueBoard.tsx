@@ -38,7 +38,9 @@ export function IssueBoard({
                 <article key={issue.id} data-issue-id={issue.id} className="cc-board-card">
                   <div className="cc-card-top">
                     <IssueLabels issue={issue} />
-                    <span className={`cc-priority ${issue.priority.toLowerCase()}`}>
+                    <span
+                      className={`cc-priority cc-table-priority ${issue.priority.toLowerCase()}`}
+                    >
                       <i />
                       {issue.priority}
                     </span>

@@ -31,3 +31,11 @@ Branch: `design/next-two-batches`. The pre-batch version is preserved on `snapsh
 Batch 1 supersedes the four-column board and manual status movement described above. It adds Epic/Story labels on the unified Issue model, validated parent links, grouped List and filtered three-column Board views, shared creation/editing, independent tasks/subtasks, and data-preserving migration. Primary statuses are To Do, AI Working, and Completed; execution alone controls AI Working. Details remain inline in Issues, with compact properties in the title/byline area and no chat sidebar.
 
 Batch state uses `cc-studio-issues-batch1`, migrating from the original v2 key without overwriting it. Fresh sample data adds Epic/Story hierarchy around existing examples; existing sessions are not replaced with sample data. See README for migration and preview-execution boundaries. Batch 2 label-aware generation and read-only execution panel are not implemented in Batch 1.
+
+Batch 1 refinement: creation and editing use a single Issue / Story / Epic choice, without label checklists or parent dropdowns. Existing metadata remains saved; new runs capture work-type context. The table replaces Created in with Label, avoiding duplicate labels under the title. Source stays in details.
+
+The issue table now shows Type (Issue / Story / Epic) derived from work type, rather than legacy labels. Existing labels remain stored.
+
+Latest UI refinement: table has a dedicated Priority column with compact tinted High/Medium/Low pills; Awaiting verification is hidden in table rows. Toolbar is search plus Type, with status tabs; source, Epic, Story, label, and grouping controls are removed. Detail status badges have rounded corners and balanced padding. Issue data now lives in React state and resets to initial examples on browser reload, per user request; old stored issue data is left untouched and is no longer loaded or written. This supersedes earlier persistence and filter descriptions.
+
+UI consistency pass: shared Issues polish styles in `src/issue-polish.css` normalize small metadata text, badge sizes, table alignment, board spacing, detail property heights, and drawer gutters/radio controls. Verified list, board, details and drawer at 390, 768 and 1440 px without document overflow or runtime errors. Portal shell and frozen v1 remain unchanged.

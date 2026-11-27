@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ancestors,
+  workTypeOf,
+  workTypeChanges,
+  planningContext,
   association,
   hasLabel,
   migrateIssues,
@@ -111,4 +114,22 @@ test('legacy active runs retain lifecycle evidence and invalid imports are repai
   const invalid = migrateIssues([{ ...epic, parentIssueId: 3 }, story, task]);
   assert.equal(invalid[0].parentIssueId, null);
   assert.equal(migrateIssues([task, task]).length, 1);
+});
+
+test('simple work type preserves existing labels and maintains valid parent context', () => {
+  const changed = { ...story, ...workTypeChanges(story, 'Issue', issues) };
+  assert.deepEqual(changed.labels, ['Bug']);
+  assert.equal(changed.parentIssueId, 1);
+  assert.equal(workTypeOf(changed), 'Issue');
+  const promoted = { ...task, ...workTypeChanges(task, 'Story', issues) };
+  assert.equal(promoted.parentIssueId, 1);
+  assert.equal(validateIssue(promoted, issues), null);
+  assert.equal(workTypeChanges(task, 'Epic', issues).parentIssueId, null);
+  assert.match(
+    validateIssue({ ...epic, ...workTypeChanges(epic, 'Issue', issues) }, issues),
+    /child Stories/,
+  );
+  assert.equal(planningContext(story, issues).workType, 'Story');
+  assert.deepEqual(planningContext(story, issues).childIssueIds, [3]);
+  assert.deepEqual(planningContext(story, issues).labels, ['Story', 'Bug']);
 });

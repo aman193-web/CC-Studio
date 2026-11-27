@@ -1,4 +1,4 @@
-import type { Issue, Run, Status, WorkItem } from './data';
+import type { Issue, Run, Status, WorkItem, WorkType } from './data';
 export const PROJECT_ID = 'realtime';
 export const labelsOf = (issue: Pick<Issue, 'label' | 'labels'>) => [
   ...new Set(issue.labels ?? (issue.label ? [issue.label] : [])),
@@ -7,6 +7,35 @@ export const hasLabel = (issue: Pick<Issue, 'label' | 'labels'>, label: string) 
   labelsOf(issue).includes(label);
 export const hierarchyKind = (issue: Pick<Issue, 'label' | 'labels'>) =>
   hasLabel(issue, 'Epic') ? 'Epic' : hasLabel(issue, 'Story') ? 'Story' : 'Regular';
+export const workTypeOf = (issue: Pick<Issue, 'label' | 'labels'>): WorkType =>
+  hasLabel(issue, 'Epic') ? 'Epic' : hasLabel(issue, 'Story') ? 'Story' : 'Issue';
+export function workTypeChanges(issue: Issue, type: WorkType, issues: Issue[]): Partial<Issue> {
+  const retained = labelsOf(issue).filter((label) => label !== 'Epic' && label !== 'Story');
+  const labels = type === 'Issue' ? retained : [type, ...retained];
+  const parentIssueId =
+    type === 'Epic'
+      ? null
+      : type === 'Story'
+        ? (ancestors(issue, issues).find((parent) => hasLabel(parent, 'Epic'))?.id ?? null)
+        : (issue.parentIssueId ?? null);
+  return { labels, label: labels[0] || '', parentIssueId };
+}
+export function planningContext(
+  issue: Issue,
+  issues: Issue[],
+): NonNullable<Run['planningContext']> {
+  return {
+    workType: workTypeOf(issue),
+    title: issue.title,
+    description: issue.description,
+    labels: labelsOf(issue),
+    parentIssueId: issue.parentIssueId ?? null,
+    childIssueIds: issues
+      .filter((child) => child.parentIssueId === issue.id)
+      .map((child) => child.id),
+    workItemIds: (issue.workItems || []).map((work) => work.id),
+  };
+}
 export const uid = () => crypto.randomUUID();
 export function ancestors(issue: Issue, issues: Issue[]): Issue[] {
   const result: Issue[] = [],

@@ -25,3 +25,11 @@
 - State key is `cc-studio-issues-batch1`; migrate v2 safely without overwriting its original storage. Fresh sample hierarchy must never replace the user's existing data.
 - Label-aware generation and the two-panel Aria execution experience belong to Batch 2. Run/event/artifact references are only a foundation in Batch 1.
 - Run `npm run check`, `npm test`, and `npm run build`. Node 22.18+ supports the model tests. Use isolated browser contexts for destructive QA changes.
+
+- Latest simplification: show one Issue / Story / Epic work-type control in creation and property editing, with no multi-label checklist or parent dropdowns. Preserve existing label metadata and hierarchy validation. New Aria runs capture planning context; full generation remains Batch 2. Table column is Label, not Created in; retain source on the detail page.
+
+The issue table now shows Type (Issue / Story / Epic) derived from work type, rather than legacy labels. Existing labels remain stored.
+
+Latest UI refinement: table has a dedicated Priority column with compact tinted High/Medium/Low pills; Awaiting verification is hidden in table rows. Toolbar is search plus Type, with status tabs; source, Epic, Story, label, and grouping controls are removed. Detail status badges have rounded corners and balanced padding. Issue data now lives in React state and resets to initial examples on browser reload, per user request; old stored issue data is left untouched and is no longer loaded or written. This supersedes earlier persistence and filter descriptions.
+
+- Aria is the sole executor: remove all assignee controls and assignment text from issue creation, details, and tasks. This supersedes the Batch 1 assignment UI rule. Retain legacy assignment data internally for compatibility.

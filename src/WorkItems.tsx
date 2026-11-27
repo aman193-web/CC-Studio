@@ -96,16 +96,6 @@ function WorkRow({
             </>
           )}
           <div className="cc-work-properties">
-            <label>
-              Assignee
-              <input
-                aria-label={`Assignee for ${work.title}`}
-                value={work.assignee}
-                disabled={locked}
-                placeholder="Unassigned"
-                onChange={(e) => patch({ assignee: e.target.value })}
-              />
-            </label>
             <span>{work.origin}</span>
             <label title="Only mark complete after verifying the work">
               <input

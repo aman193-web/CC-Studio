@@ -2,16 +2,8 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { gsap } from 'gsap';
 import { CheckCircle2, ChevronDown, Circle, GitBranch, Plus, Sparkles } from 'lucide-react';
-import type { Issue, Status } from './data';
-import { issueLabels } from './data';
-import {
-  ancestors,
-  hasLabel,
-  hierarchyKind,
-  labelsOf,
-  parentError,
-  secondaryStatus,
-} from './issueModel';
+import type { Issue, Status, WorkType } from './data';
+import { labelsOf, parentError, secondaryStatus } from './issueModel';
 import { AriaAction } from './AriaAction';
 
 export function useIssueMotion<T extends HTMLElement = HTMLDivElement>(key: unknown) {
@@ -82,7 +74,7 @@ export function IssueLabels({ issue }: { issue: Issue }) {
   const ref = useIssueMotion(labels.join(','));
   return (
     <div ref={ref} className="cc-labels">
-      {labels.map((label) => (
+      {(labels.length ? labels : ['Issue']).map((label) => (
         <span key={label} className={`cc-type ${label.toLowerCase()}`}>
           {label}
         </span>
@@ -96,43 +88,31 @@ export function IssueLabels({ issue }: { issue: Issue }) {
     </div>
   );
 }
-export function LabelPicker({
+export function WorkTypePicker({
   value,
   onChange,
-  extra = [],
 }: {
-  value: string[];
-  onChange: (labels: string[]) => void;
-  extra?: string[];
+  value: WorkType;
+  onChange: (value: WorkType) => void;
 }) {
   return (
-    <fieldset className="cc-label-picker">
-      <legend>Labels</legend>
+    <fieldset className="cc-work-type-picker">
+      <legend>Work type</legend>
       <div>
-        {[...new Set([...issueLabels, ...extra])].map((label) => (
-          <label key={label} className={value.includes(label) ? 'selected' : ''}>
+        {(['Issue', 'Story', 'Epic'] as const).map((type) => (
+          <label key={type} className={value === type ? 'selected' : ''}>
             <input
-              type="checkbox"
-              checked={value.includes(label)}
-              onChange={(e) =>
-                onChange(
-                  e.target.checked
-                    ? [
-                        ...value.filter(
-                          (l) =>
-                            !(label === 'Epic' && l === 'Story') &&
-                            !(label === 'Story' && l === 'Epic'),
-                        ),
-                        label,
-                      ]
-                    : value.filter((l) => l !== label),
-                )
-              }
+              type="radio"
+              name="work-type"
+              value={type}
+              checked={value === type}
+              onChange={() => onChange(type)}
             />
-            {label}
+            {type}
           </label>
         ))}
       </div>
+      <p>Helps Aria understand the scope of your plan.</p>
     </fieldset>
   );
 }
@@ -164,94 +144,6 @@ export function SecondaryBadge({ issue }: { issue: Issue }) {
       {text}
     </span>
   ) : null;
-}
-export function ParentFields({
-  issue,
-  issues,
-  onChange,
-}: {
-  issue: Issue;
-  issues: Issue[];
-  onChange: (id: number | null) => void;
-}) {
-  const kind = hierarchyKind(issue);
-  const path = ancestors(issue, issues);
-  const epic = path.find((i) => hasLabel(i, 'Epic'));
-  const story = path.find((i) => hasLabel(i, 'Story'));
-  const parent = issues.find((i) => i.id === issue.parentIssueId);
-  const ref = useIssueMotion(`${kind}-${epic?.id}`);
-  const compatible = (i: Issue) => !parentError(issue, i.id, issues);
-  if (kind === 'Epic') return null;
-  return (
-    <div ref={ref} className="cc-parent-fields">
-      <label>
-        Epic
-        <select
-          aria-label="Parent Epic"
-          value={epic?.id || ''}
-          onChange={(e) => onChange(Number(e.target.value) || null)}
-        >
-          <option value="">None</option>
-          {issues
-            .filter((i) => hasLabel(i, 'Epic') && compatible(i))
-            .map((i) => (
-              <option key={i.id} value={i.id}>
-                #{i.id} · {i.title}
-              </option>
-            ))}
-        </select>
-      </label>
-      {kind !== 'Story' && (
-        <label>
-          Story
-          <select
-            aria-label="Parent Story"
-            value={story?.id || ''}
-            onChange={(e) => onChange(Number(e.target.value) || epic?.id || null)}
-          >
-            <option value="">None</option>
-            {issues
-              .filter(
-                (i) =>
-                  hasLabel(i, 'Story') && compatible(i) && (!epic || i.parentIssueId === epic.id),
-              )
-              .map((i) => (
-                <option key={i.id} value={i.id}>
-                  #{i.id} · {i.title}
-                </option>
-              ))}
-          </select>
-        </label>
-      )}
-      {kind === 'Regular' && (
-        <label>
-          Parent issue
-          <select
-            aria-label="Parent issue"
-            value={parent && hierarchyKind(parent) === 'Regular' ? parent.id : ''}
-            onChange={(e) => onChange(Number(e.target.value) || story?.id || epic?.id || null)}
-          >
-            <option value="">
-              {story ? `Under Story #${story.id}` : epic ? `Under Epic #${epic.id}` : 'None'}
-            </option>
-            {issues
-              .filter(
-                (i) =>
-                  hierarchyKind(i) === 'Regular' &&
-                  compatible(i) &&
-                  (!epic || ancestors(i, issues).some((p) => p.id === epic.id)) &&
-                  (!story || ancestors(i, issues).some((p) => p.id === story.id)),
-              )
-              .map((i) => (
-                <option key={i.id} value={i.id}>
-                  #{i.id} · {i.title}
-                </option>
-              ))}
-          </select>
-        </label>
-      )}
-    </div>
-  );
 }
 export function ChildIssues({
   issue,
