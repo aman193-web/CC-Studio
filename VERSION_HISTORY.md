@@ -1,0 +1,25 @@
+# CC Studio design versions
+
+## Version 2 — existing Studio shell + Issues
+
+Preview: [current design](http://127.0.0.1:5173/).
+
+Source: `src/`. State key: `cc-studio-issues-v2`.
+
+The user's revised direction is to retain the current CC Studio layout and add only an Issues tab. The portal shell was subsequently updated to the supplied 1440 × 931 SVG on November 27, 2026. The vector logo is extracted directly from that asset; header and panel dimensions, colors, card spacing, full suggestion text, and composer styling follow the SVG. Roboto remains the existing application font. Features now opens first, with Issues retained in the tab row. The SVG is retained at `public/portal-reference.svg`.
+
+Issues now offers a List / Board toggle, status tabs, search, creation-source filtering, list pagination, and a shared Aria action. The four-column Kanban board supports dragging between statuses and an accessible status dropdown. View preference is saved separately in `cc-studio-issue-view`. The welcome banner has been removed; the existing star mascot now sits to the right of the status tabs, and the Issues header is compact without a project caption; button and card-entry motion respects reduced-motion settings. The surrounding SVG-based portal remains unchanged. Each issue shows where it originated and a GitLab ticket link. GitLab is already connected; there is no connection setup. Ticket links open a design preview instead of navigating to invented live tickets. Aria's planning, approval, and execution remain interactive simulations.
+
+Issue navigation now uses dedicated detail pages at `/#issues/<id>` with browser history support and a Back to issues action. Creation uses a right-side drawer with pinned actions; submitting opens the new detail page. Typography gives the Issues title priority over the Aria banner and distinguishes section headings, item titles, body copy, and labels.
+
+## Version 1 — standalone project-management workspace (preserved)
+
+Preview: [first design](http://127.0.0.1:5173/v1/index.html).
+
+Source snapshot: `versions/v1/`. Frozen build: `public/v1/`. State key: `cc-studio-projects-v1`.
+
+The user liked this version and explicitly asked that it be kept separately. It has its own sidebar, project issue board/list, Aria activity rail, banner, and repository setup preview. It should remain unchanged while the new design evolves.
+
+The snapshot includes source, dependencies/lockfile, build configuration, public assets, and original README. The frozen build can be opened on the same dev server without rebuilding or switching branches.
+
+Aria actions and ticket previews now use dedicated in-tab pages at `/#issues/<id>/aria` and `/#issues/<id>/ticket`, retaining the Studio header, navigation, and assistant panel. All workflow stages remain inside Issues, with back/history support. New issue stays a right-side drawer.
