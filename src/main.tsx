@@ -10,6 +10,7 @@ import './styles.css';
 import './issues.css';
 import './issue-polish.css';
 import './aria-workspace.css';
+import './split-workspace.css';
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

@@ -305,7 +305,17 @@ export function CodeChangesPanel({ run }: { run: Run }) {
     </AriaDisclosure>
   );
 }
-export function AriaPlanPanel({ issue, controls }: { issue: Issue; controls: AriaControls }) {
+export function AriaPlanPanel({
+  issue,
+  controls,
+  tasksOnLeft = false,
+  onViewTasks,
+}: {
+  issue: Issue;
+  controls: AriaControls;
+  tasksOnLeft?: boolean;
+  onViewTasks?: () => void;
+}) {
   const run = issue.run,
     phase = run?.phase || 'idle';
   const [instructions, setInstructions] = useState('');
@@ -352,7 +362,7 @@ export function AriaPlanPanel({ issue, controls }: { issue: Issue; controls: Ari
                             : 'Work complete'}
           </h2>
         </div>
-        {phase === 'idle' && issue.status !== 'Completed' && (
+        {phase === 'idle' && issue.status !== 'Completed' && !tasksOnLeft && (
           <button className="button primary ap-start" onClick={() => controls.start(instructions)}>
             <Sparkles size={16} /> Fix with Aria
           </button>
@@ -381,6 +391,17 @@ export function AriaPlanPanel({ issue, controls }: { issue: Issue; controls: Ari
                   onChange={(e) => setInstructions(e.target.value)}
                 />
               </AriaDisclosure>
+              {tasksOnLeft && (
+                <div className="sw-start-row">
+                  <button
+                    className="button primary ap-start"
+                    onClick={() => controls.start(instructions)}
+                  >
+                    <Sparkles size={16} /> Fix with Aria
+                  </button>
+                  <span>You approve before Aria starts.</span>
+                </div>
+              )}
             </>
           )}
         </>
@@ -522,22 +543,38 @@ export function AriaPlanPanel({ issue, controls }: { issue: Issue; controls: Ari
               </button>
             </div>
           )}
-          <div className="ap-hierarchy">
-            {plan.groups.map((group) => (
-              <Group
-                key={group.id}
-                group={group}
-                run={run!}
-                locked={phase !== 'plan'}
-                onChange={(next) =>
-                  setPlan({
-                    ...plan,
-                    groups: plan.groups.map((g) => (g.id === next.id ? next : g)),
-                  })
-                }
-              />
-            ))}
-          </div>
+          {tasksOnLeft && phase !== 'plan' ? (
+            <div className="sw-transfer-note">
+              <CheckCircle2 size={18} />
+              <div>
+                <strong>Tasks added to your issue</strong>
+                <p>
+                  The approved tasks and subtasks are now on the left. Follow their progress as Aria
+                  works.
+                </p>
+                <button className="text-button" onClick={onViewTasks}>
+                  View issue tasks
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="ap-hierarchy">
+              {plan.groups.map((group) => (
+                <Group
+                  key={group.id}
+                  group={group}
+                  run={run!}
+                  locked={phase !== 'plan'}
+                  onChange={(next) =>
+                    setPlan({
+                      ...plan,
+                      groups: plan.groups.map((g) => (g.id === next.id ? next : g)),
+                    })
+                  }
+                />
+              ))}
+            </div>
+          )}
           {phase === 'plan' && (
             <>
               {revision && (
@@ -613,7 +650,6 @@ export function AriaPlanPanel({ issue, controls }: { issue: Issue; controls: Ari
                     {run?.partial
                       ? 'Excluded or incomplete requirements remain visible in the issue.'
                       : 'Review the implementation outline and retained activity.'}{' '}
-                    No production code or tests were run.
                   </p>
                   {run?.completedAt && (
                     <small>

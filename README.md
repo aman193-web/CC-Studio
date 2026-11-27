@@ -59,3 +59,7 @@ Repository artifacts are optional typed records. The Code changes section opens 
 - Original snapshot: `snapshots/current-2026-11-27` at `53fbdcc`.
 - Refined pre-Batch-2 snapshot: `snapshots/pre-batch2-2026-11-27` at `c89c750`.
 - Active branch: `design/next-two-batches`.
+
+### Compare issue layouts
+
+Use the small **Current / Split workspace** toggle in the issue header. Split workspace is the default: issue details and committed tasks occupy the left panel, while Aria proposals and actions occupy the right. Approving a plan creates the task tree on the left without duplicating it on the right. Both layouts share the same session state. On mobile, switch between **Issue & tasks** and **Aria**. The original layout is also preserved on `snapshots/pre-split-workspace-2026-11-27`.

@@ -49,3 +49,7 @@ Replaced the five-step wizard with direct planning and a compact two-panel Issue
 Execution is explicitly demonstrated, with no live Aria/repository backend. Code changes are shown only when actual artifact URLs are supplied. Full browser refresh resets to the initial data. V1 remains unchanged.
 
 - Issue Details keeps its title, metadata and properties in a full-width header above the two-panel workspace. The idle Aria card uses a compact introduction with its action aligned right and expandable instructions below.
+
+## Split workspace comparison — 27 November 2026
+
+The Current / Split workspace toggle lets reviewers compare both layouts using the same issue data. Split puts issue context and committed tasks on the left, Aria planning and actions on the right. Approval moves tasks and subtasks into the left implementation section; progress remains on the right. The previous version is preserved at `7cfffeb` on `snapshots/pre-split-workspace-2026-11-27`.

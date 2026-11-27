@@ -56,6 +56,7 @@ import {
 import { AriaPlanPanel } from './AriaPlanPanel';
 import type { AriaControls } from './AriaPlanPanel';
 import { IssueDetailsWorkspace } from './IssueDetailsWorkspace';
+import { SplitIssueWorkspace } from './SplitIssueWorkspace';
 import type { WorkspacePreference } from './ariaTypes';
 import {
   beginDemo,
@@ -158,6 +159,7 @@ export default function App() {
     };
   }, []);
   const [issues, setIssues] = useState<Issue[]>(seed);
+  const [detailLayout, setDetailLayout] = useState<'current' | 'split'>('split');
   const [workspacePreferences, setWorkspacePreferences] = useState<
     Record<number, WorkspacePreference>
   >({});
@@ -729,6 +731,8 @@ export default function App() {
             selected ? (
               <IssueDetails
                 key={selected.id}
+                layout={detailLayout}
+                onLayout={setDetailLayout}
                 issue={selected}
                 issues={issues}
                 onOpen={openIssue}
@@ -936,6 +940,8 @@ export default function App() {
 }
 
 function IssueDetails({
+  layout,
+  onLayout,
   issue,
   issues,
   onOpen,
@@ -949,6 +955,8 @@ function IssueDetails({
   onPreference,
   onTicket,
 }: {
+  layout: 'current' | 'split';
+  onLayout: (layout: 'current' | 'split') => void;
   issue: Issue;
   issues: Issue[];
   onOpen: (id: number) => void;
@@ -975,13 +983,147 @@ function IssueDetails({
     onChange({ title: title.trim(), description: description.trim() });
     setEditing(false);
   };
+  const issueHeader = (
+    <header className="cc-issue-page-header cc-integrated-header">
+      <div className="cc-detail-kicker">
+        <IssueLabels issue={issue} />
+        <span>ISSUE #{issue.id}</span>
+      </div>
+      {editing ? (
+        <label className="cc-edit-title-label">
+          Issue title
+          <input
+            aria-label="Issue title"
+            maxLength={160}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </label>
+      ) : (
+        <h1 ref={heading} tabIndex={-1}>
+          {issue.title}
+        </h1>
+      )}
+      <div className="cc-detail-byline">
+        <span>
+          Created in <Source source={issue.source} />
+        </span>
+        <span className="cc-byline-dot">·</span>
+        <span>{issue.date}</span>
+        <span className="cc-byline-dot">·</span>
+        <IssueBranch issue={issue} />
+        <span className="cc-byline-dot">·</span>
+        <button className="cc-page-ticket" onClick={onTicket}>
+          <Gitlab size={15} />
+          <span>GitLab #{issue.id}</span>
+          <ExternalLink size={12} />
+        </button>
+      </div>
+      <div className="cc-issue-properties cc-header-properties" aria-label="Issue properties">
+        <label>
+          Type
+          <select
+            aria-label="Issue type"
+            value={workTypeOf(issue)}
+            onChange={(e) => onChange(workTypeChanges(issue, e.target.value as WorkType, issues))}
+          >
+            {['Issue', 'Story', 'Epic'].map((type) => (
+              <option key={type}>{type}</option>
+            ))}
+          </select>
+        </label>
+        <div className="cc-status-property">
+          <span>Status</span>
+          <StatusBadge issue={issue} />
+          <SecondaryBadge issue={issue} />
+        </div>
+        <label>
+          Priority
+          <select
+            aria-label="Issue priority"
+            value={issue.priority}
+            onChange={(e) => onChange({ priority: e.target.value as Priority })}
+          >
+            {['High', 'Medium', 'Low'].map((p) => (
+              <option key={p}>{p}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="cc-organize-line">
+        {ancestors(issue, issues)
+          .filter((p) => hasLabel(p, 'Epic') || hasLabel(p, 'Story'))
+          .map((p) => (
+            <button key={p.id} onClick={() => onOpen(p.id)}>
+              <span className={`cc-type ${hasLabel(p, 'Epic') ? 'epic' : 'story'}`}>
+                {hasLabel(p, 'Epic') ? 'Epic' : 'Story'}
+              </span>
+              {p.title}
+            </button>
+          ))}
+      </div>
+    </header>
+  );
+  const issueDescription = (
+    <section className="cc-description-section">
+      <div className="cc-section-heading">
+        <h2>Description</h2>
+        {!editing ? (
+          <button className="text-button" onClick={() => setEditing(true)}>
+            <Pencil size={13} />
+            Edit issue
+          </button>
+        ) : (
+          <div className="cc-edit-actions">
+            <button
+              className="button"
+              onClick={() => {
+                setTitle(issue.title);
+                setDescription(issue.description);
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </button>
+            <button className="button primary" disabled={!title.trim()} onClick={save}>
+              Save changes
+            </button>
+          </div>
+        )}
+      </div>
+      {editing ? (
+        <textarea
+          aria-label="Issue description"
+          rows={8}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      ) : (
+        <p>
+          {issue.description ||
+            'No description added yet. Add context to help your team get started.'}
+        </p>
+      )}
+    </section>
+  );
   return (
-    <section className="cc-issue-page" aria-label="Issue details">
+    <section
+      className={`cc-issue-page ${layout === 'split' ? 'sw-page' : ''}`}
+      aria-label="Issue details"
+    >
       <div className="cc-detail-navigation">
         <button className="cc-back-button" onClick={onClose}>
           <ArrowLeft size={16} />
           Back to issues
         </button>
+        <div className="sw-layout-toggle" role="group" aria-label="Compare issue layouts">
+          <button aria-pressed={layout === 'current'} onClick={() => onLayout('current')}>
+            Current
+          </button>
+          <button aria-pressed={layout === 'split'} onClick={() => onLayout('split')}>
+            <Columns3 size={13} /> Split workspace
+          </button>
+        </div>
         <span>
           <button onClick={onClose}>Issues</button>
           {ancestors(issue, issues).map((parent) => (
@@ -993,141 +1135,38 @@ function IssueDetails({
           <ChevronRight size={12} /> Issue #{issue.id}
         </span>
       </div>
-      <header className="cc-issue-page-header cc-integrated-header">
-        <div className="cc-detail-kicker">
-          <IssueLabels issue={issue} />
-          <span>ISSUE #{issue.id}</span>
-        </div>
-        {editing ? (
-          <label className="cc-edit-title-label">
-            Issue title
-            <input
-              aria-label="Issue title"
-              maxLength={160}
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </label>
-        ) : (
-          <h1 ref={heading} tabIndex={-1}>
-            {issue.title}
-          </h1>
-        )}
-        <div className="cc-detail-byline">
-          <span>
-            Created in <Source source={issue.source} />
-          </span>
-          <span className="cc-byline-dot">·</span>
-          <span>{issue.date}</span>
-          <span className="cc-byline-dot">·</span>
-          <IssueBranch issue={issue} />
-          <span className="cc-byline-dot">·</span>
-          <button className="cc-page-ticket" onClick={onTicket}>
-            <Gitlab size={15} />
-            <span>GitLab #{issue.id}</span>
-            <ExternalLink size={12} />
-          </button>
-        </div>
-        <div className="cc-issue-properties cc-header-properties" aria-label="Issue properties">
-          <label>
-            Type
-            <select
-              aria-label="Issue type"
-              value={workTypeOf(issue)}
-              onChange={(e) => onChange(workTypeChanges(issue, e.target.value as WorkType, issues))}
-            >
-              {['Issue', 'Story', 'Epic'].map((type) => (
-                <option key={type}>{type}</option>
-              ))}
-            </select>
-          </label>
-          <div className="cc-status-property">
-            <span>Status</span>
-            <StatusBadge issue={issue} />
-            <SecondaryBadge issue={issue} />
-          </div>
-          <label>
-            Priority
-            <select
-              aria-label="Issue priority"
-              value={issue.priority}
-              onChange={(e) => onChange({ priority: e.target.value as Priority })}
-            >
-              {['High', 'Medium', 'Low'].map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="cc-organize-line">
-          {ancestors(issue, issues)
-            .filter((p) => hasLabel(p, 'Epic') || hasLabel(p, 'Story'))
-            .map((p) => (
-              <button key={p.id} onClick={() => onOpen(p.id)}>
-                <span className={`cc-type ${hasLabel(p, 'Epic') ? 'epic' : 'story'}`}>
-                  {hasLabel(p, 'Epic') ? 'Epic' : 'Story'}
-                </span>
-                {p.title}
-              </button>
-            ))}
-        </div>
-      </header>
-      <IssueDetailsWorkspace issue={issue} preference={preference} onPreference={onPreference}>
-        <div ref={detailMotion} className="cc-issue-page-grid">
-          <div className="cc-issue-page-content">
-            <section className="cc-description-section">
-              <div className="cc-section-heading">
-                <h2>Description</h2>
-                {!editing ? (
-                  <button className="text-button" onClick={() => setEditing(true)}>
-                    <Pencil size={13} />
-                    Edit issue
-                  </button>
-                ) : (
-                  <div className="cc-edit-actions">
-                    <button
-                      className="button"
-                      onClick={() => {
-                        setTitle(issue.title);
-                        setDescription(issue.description);
-                        setEditing(false);
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button className="button primary" disabled={!title.trim()} onClick={save}>
-                      Save changes
-                    </button>
-                  </div>
-                )}
-              </div>
-              {editing ? (
-                <textarea
-                  aria-label="Issue description"
-                  rows={8}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+      {layout === 'split' ? (
+        <SplitIssueWorkspace
+          issue={issue}
+          issues={issues}
+          header={issueHeader}
+          description={issueDescription}
+          controls={ariaControls}
+          onOpen={onOpen}
+          onChange={onChange}
+        />
+      ) : (
+        <>
+          {issueHeader}
+          <IssueDetailsWorkspace issue={issue} preference={preference} onPreference={onPreference}>
+            <div ref={detailMotion} className="cc-issue-page-grid">
+              <div className="cc-issue-page-content">
+                {issueDescription}
+                <AriaPlanPanel issue={issue} controls={ariaControls} />
+                <ChildIssues
+                  issue={issue}
+                  issues={issues}
+                  onOpen={onOpen}
+                  onFix={onFix}
+                  onCreate={onCreateChild}
+                  onAssociate={onAssociate}
                 />
-              ) : (
-                <p>
-                  {issue.description ||
-                    'No description added yet. Add context to help your team get started.'}
-                </p>
-              )}
-            </section>
-            <AriaPlanPanel issue={issue} controls={ariaControls} />
-            <ChildIssues
-              issue={issue}
-              issues={issues}
-              onOpen={onOpen}
-              onFix={onFix}
-              onCreate={onCreateChild}
-              onAssociate={onAssociate}
-            />
-            <IssueContext issue={issue} onChange={onChange} />
-          </div>
-        </div>
-      </IssueDetailsWorkspace>
+                <IssueContext issue={issue} onChange={onChange} />
+              </div>
+            </div>
+          </IssueDetailsWorkspace>
+        </>
+      )}
     </section>
   );
 }

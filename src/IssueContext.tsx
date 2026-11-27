@@ -18,11 +18,13 @@ import { useIssueMotion } from './IssueHierarchy';
 export function IssueContext({
   issue,
   onChange,
+  showTasks = true,
 }: {
+  showTasks?: boolean;
   issue: Issue;
   onChange: (changes: Partial<Issue>) => void;
 }) {
-  const [tab, setTab] = useState('Tasks');
+  const [tab, setTab] = useState(showTasks ? 'Tasks' : 'Comments');
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
   const upload = useRef<HTMLInputElement>(null);
@@ -32,7 +34,7 @@ export function IssueContext({
   const media = issue.media || [];
   const tabs = [
     { name: 'Activity', icon: Activity, count: null },
-    { name: 'Tasks', icon: ListTree, count: tasks.length },
+    ...(showTasks ? [{ name: 'Tasks', icon: ListTree, count: tasks.length }] : []),
     { name: 'Media', icon: Paperclip, count: media.length },
     { name: 'Comments', icon: MessageSquare, count: issue.comments + notes.length },
   ];

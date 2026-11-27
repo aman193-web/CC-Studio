@@ -115,7 +115,7 @@ function ActivityEntry({ event }: { event: AriaEvent }) {
     </div>
   );
 }
-function ActivityPanel({ issue }: { issue: Issue }) {
+export function ActivityPanel({ issue, compact = false }: { issue: Issue; compact?: boolean }) {
   const scroll = useRef<HTMLDivElement>(null),
     nearBottom = useRef(true);
   const [unseen, setUnseen] = useState(false);
@@ -145,57 +145,59 @@ function ActivityPanel({ issue }: { issue: Issue }) {
           if (nearBottom.current) setUnseen(false);
         }}
       >
-        <section
-          className={`aa-overview aa-phase-${issue.run?.phase || 'idle'}`}
-          aria-label="Current Aria status"
-        >
-          <div className="aa-overview-heading">
-            <AriaAvatar small />
-            <div>
-              <span>ARIA WORKSPACE</span>
-              <h2>{context.title}</h2>
-            </div>
-          </div>
-          <p>{context.description}</p>
-          {issue.run?.plan && (
-            <div className="aa-run-stats">
-              <span>
-                Plan <strong>v{issue.run.plan.version}</strong>
-              </span>
-              <span>
-                <strong>{total}</strong> {issue.run.scope ? 'approved tasks' : 'selected tasks'}
-              </span>
-              {issue.run.scope && (
-                <span>
-                  <strong>
-                    {completed}/{total}
-                  </strong>{' '}
-                  complete
-                </span>
-              )}
-            </div>
-          )}
-          {issue.run?.scope && (
-            <progress aria-label="Approved tasks completed" value={completed} max={total || 1} />
-          )}
-          {issue.run?.plan && (
-            <AriaDisclosure className="aa-plan-context">
-              <summary>
-                <ChevronDown size={13} /> Scope & verification
-              </summary>
+        {!compact && (
+          <section
+            className={`aa-overview aa-phase-${issue.run?.phase || 'idle'}`}
+            aria-label="Current Aria status"
+          >
+            <div className="aa-overview-heading">
+              <AriaAvatar small />
               <div>
-                <h3>Intended outcome</h3>
-                <p>{issue.run.plan.outcome}</p>
-                <h3>Planned checks</h3>
-                <ul>
-                  {issue.run.plan.verification.map((check, i) => (
-                    <li key={i}>{check}</li>
-                  ))}
-                </ul>
+                <span>ARIA WORKSPACE</span>
+                <h2>{context.title}</h2>
               </div>
-            </AriaDisclosure>
-          )}
-        </section>
+            </div>
+            <p>{context.description}</p>
+            {issue.run?.plan && (
+              <div className="aa-run-stats">
+                <span>
+                  Plan <strong>v{issue.run.plan.version}</strong>
+                </span>
+                <span>
+                  <strong>{total}</strong> {issue.run.scope ? 'approved tasks' : 'selected tasks'}
+                </span>
+                {issue.run.scope && (
+                  <span>
+                    <strong>
+                      {completed}/{total}
+                    </strong>{' '}
+                    complete
+                  </span>
+                )}
+              </div>
+            )}
+            {issue.run?.scope && (
+              <progress aria-label="Approved tasks completed" value={completed} max={total || 1} />
+            )}
+            {issue.run?.plan && (
+              <AriaDisclosure className="aa-plan-context">
+                <summary>
+                  <ChevronDown size={13} /> Scope & verification
+                </summary>
+                <div>
+                  <h3>Intended outcome</h3>
+                  <p>{issue.run.plan.outcome}</p>
+                  <h3>Planned checks</h3>
+                  <ul>
+                    {issue.run.plan.verification.map((check, i) => (
+                      <li key={i}>{check}</li>
+                    ))}
+                  </ul>
+                </div>
+              </AriaDisclosure>
+            )}
+          </section>
+        )}
         <div className="aa-timeline-heading">
           <h3>Activity timeline</h3>
           <span>
