@@ -18,8 +18,8 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { taskPlan } from './data';
 import type { Issue, Run, Task } from './data';
+import { ExpandRegion, useIssueMotion } from './IssueHierarchy';
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
 export function AriaAvatar({ small = false, large = false }: { small?: boolean; large?: boolean }) {
   return (
@@ -54,7 +54,29 @@ export function Modal({
   const ref = useRef<HTMLDivElement>(null);
   const previousFocus = useRef(document.activeElement as HTMLElement | null);
   const close = useRef(onClose);
-  close.current = onClose;
+  const closing = useRef(false);
+  const closeTween = useRef<gsap.core.Tween | null>(null);
+  const dismiss = () => {
+    if (closing.current) return;
+    closing.current = true;
+    if (!drawer || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      onClose();
+      return;
+    }
+    closeTween.current = gsap.to(ref.current, {
+      x: '100%',
+      duration: 0.2,
+      ease: 'power2.in',
+      onComplete: onClose,
+    });
+  };
+  close.current = dismiss;
+  useEffect(
+    () => () => {
+      closeTween.current?.kill();
+    },
+    [],
+  );
   useEffect(() => {
     const el = ref.current!;
     const bodyOverflow = document.body.style.overflow;
@@ -115,7 +137,7 @@ export function Modal({
     <div
       className={cx('modal-backdrop', drawer && 'cc-drawer-backdrop')}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) dismiss();
       }}
     >
       <div
@@ -133,7 +155,7 @@ export function Modal({
           <button
             className="icon-button"
             aria-label={drawer ? 'Close new issue sidebar' : 'Close dialog'}
-            onClick={onClose}
+            onClick={dismiss}
           >
             <X size={20} />
           </button>
@@ -202,6 +224,7 @@ export function AriaWorkspace({
   const [expanded, setExpanded] = useState<number | null>(1);
   const [showSummary, setShowSummary] = useState(false);
   const phase = issue.run?.phase || 'idle';
+  const workflowRef = useIssueMotion(phase);
   const tasks = issue.run?.tasks || [];
   const enabled = tasks.filter((t) => t.enabled);
   const stage =
@@ -218,7 +241,7 @@ export function AriaWorkspace({
     onRunUpdate({ tasks: tasks.map((t) => (t.id === id ? { ...t, ...changes } : t)) });
   return (
     <section id="issue-aria-workflow" className="cc-inline-aria" aria-label="Aria workflow">
-      <div className="aria-modal-body">
+      <div ref={workflowRef} className="aria-modal-body">
         <div className="workflow-source">
           <span>Created in {issue.source === 'Studio' ? 'CC Studio' : 'GitLab'}</span>
           <span>GitLab ticket #{issue.id}</span>
@@ -362,7 +385,7 @@ export function AriaWorkspace({
               </div>
             </div>
             <p className="question-copy">
-              Review the work below, adjust the assignments, and approve when you’re happy.
+              Review the work below and approve the tasks you want Aria to execute.
             </p>
             {issue.run?.answer && (
               <div className="answer-summary">
@@ -380,6 +403,12 @@ export function AriaWorkspace({
                 Aria handles every task
               </span>
             </div>
+            {!tasks.length && (
+              <p className="cc-small-empty">
+                This issue already has child work, or all its tasks are complete. Open a child issue
+                to plan its implementation, or add an independent task in Tasks below.
+              </p>
+            )}
             <div className="plan-tasks">
               {tasks.map((t, index) => (
                 <div key={t.id} className={cx('plan-task', !t.enabled && 'excluded')}>
@@ -399,18 +428,16 @@ export function AriaWorkspace({
                       <ChevronDown size={15} />
                     </button>
                   </div>
-                  {expanded === t.id && (
+                  <ExpandRegion open={expanded === t.id}>
                     <div className="task-description">
                       <p>{t.detail}</p>
                       <ul>
-                        {(t.subtasks || taskPlan(issue.title)[index].subtasks || []).map(
-                          (subtask) => (
-                            <li key={subtask}>{subtask}</li>
-                          ),
-                        )}
+                        {(t.subtasks || []).map((subtask) => (
+                          <li key={subtask}>{subtask}</li>
+                        ))}
                       </ul>
                     </div>
-                  )}
+                  </ExpandRegion>
                   <div className="task-assignment">
                     <span>
                       <Code2 size={13} />
@@ -470,8 +497,8 @@ export function AriaWorkspace({
                       {i < issue.run!.step
                         ? 'Completed'
                         : i === issue.run!.step
-                          ? 'In progress'
-                          : 'Queued'}
+                          ? 'AI Working'
+                          : 'To Do'}
                     </small>
                   </div>
                 </div>
@@ -538,9 +565,17 @@ export function AriaWorkspace({
             Continue browsing
           </button>
         ) : (
-          <button className="button primary" disabled={issue.status === 'Done'} onClick={onDone}>
+          <button
+            className="button primary"
+            disabled={issue.status === 'Completed' || !issue.run?.verified}
+            onClick={onDone}
+          >
             <CheckCheck size={15} />
-            {issue.status === 'Done' ? 'Issue completed' : 'Mark issue as done'}
+            {issue.status === 'Completed'
+              ? 'Issue completed'
+              : !issue.run?.verified
+                ? 'Awaiting verification'
+                : 'Mark issue as completed'}
           </button>
         )}
       </div>

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { gsap } from 'gsap';
-import { AriaAction, IssueBoard } from './IssueBoard';
+import { IssueBoard } from './IssueBoard';
 import { IssueContext, IssueBranch } from './IssueContext';
 import {
   ArrowRight,
@@ -9,10 +9,7 @@ import {
   Pencil,
   CheckCircle2,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
-  Circle,
-  CircleDashed,
   Clock3,
   Cloud,
   Database,
@@ -31,43 +28,90 @@ import {
   Rocket,
   Search,
   Settings,
-  Sparkles,
   UserCircle,
   X,
 } from 'lucide-react';
-import { AriaAvatar, AriaWorkspace, IssueActionView, Modal } from './AriaWorkflow';
-import { initialIssues, phaseLabels, statuses, taskPlan } from './data';
-import type { Issue, Phase, Priority, Run, Status } from './data';
+import { AriaAvatar, AriaWorkspace, IssueActionView } from './AriaWorkflow';
+import { initialIssues, issueLabels, phaseLabels, statuses, taskPlan } from './data';
+import type { Issue, Phase, Priority, Run } from './data';
 
-const STORAGE = 'cc-studio-issues-v2';
-const seed = () =>
-  initialIssues.map((i) => ({
+import { CreateIssue } from './CreateIssue';
+import { IssueList } from './IssueList';
+import {
+  ChildIssues,
+  IssueLabels,
+  LabelPicker,
+  ParentFields,
+  StatusBadge,
+  SecondaryBadge,
+  useIssueMotion,
+} from './IssueHierarchy';
+import {
+  ancestors,
+  association,
+  hasLabel,
+  labelsOf,
+  migrateIssues,
+  newIssueData,
+  reconcileApprovedWork,
+  searchIssue,
+  uid,
+  validateIssue,
+} from './issueModel';
+const STORAGE = 'cc-studio-issues-batch1';
+const seed = () => {
+  const base = initialIssues.map((i) => ({
     ...i,
     source: i.source === 'Studio' ? ('Studio' as const) : ('GitLab' as const),
   }));
+  const epic = {
+    ...newIssueData(50, 'Analytics and reporting', ['Epic']),
+    description: 'Make dashboard data easier to explore, understand, and export.',
+  };
+  const story = {
+    ...newIssueData(51, 'Explore dashboard analytics', ['Story']),
+    description: 'As a workspace member, I can filter, sort, and export analytics.',
+    parentIssueId: 50,
+  };
+  const auth = {
+    ...newIssueData(52, 'User authentication', ['Epic']),
+    description: 'Provide a reliable and accessible sign-in experience.',
+  };
+  const login = {
+    ...newIssueData(53, 'Reliable sign-in and recovery', ['Story']),
+    description: 'Help users return to their work after signing in.',
+    parentIssueId: 52,
+  };
+  return migrateIssues([
+    ...base.map((i) => ({
+      ...i,
+      parentIssueId: [42, 38, 36, 33, 31].includes(i.id) ? 51 : [41, 34].includes(i.id) ? 53 : null,
+    })),
+    epic,
+    story,
+    auth,
+    login,
+  ]);
+};
 function loadIssues(): Issue[] {
   try {
-    const value = JSON.parse(localStorage.getItem(STORAGE) || 'null');
-    return Array.isArray(value) &&
+    const saved = localStorage.getItem(STORAGE);
+    const legacy = localStorage.getItem('cc-studio-issues-v2');
+    const value = JSON.parse(saved || legacy || 'null');
+    if (
+      Array.isArray(value) &&
       value.every((i) => typeof i.id === 'number' && typeof i.title === 'string')
-      ? value
-      : seed();
+    ) {
+      if (!saved && legacy && !localStorage.getItem('cc-studio-issues-v2-before-batch1'))
+        localStorage.setItem('cc-studio-issues-v2-before-batch1', legacy);
+      return migrateIssues(value);
+    }
+    return seed();
   } catch {
     return seed();
   }
 }
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
-function StatusMark({ status }: { status: Status }) {
-  return status === 'Done' ? (
-    <CheckCircle2 size={14} />
-  ) : status === 'In review' ? (
-    <CircleDashed size={14} />
-  ) : status === 'In progress' ? (
-    <span className="cc-progress-dot" />
-  ) : (
-    <Circle size={14} />
-  );
-}
 function Source({ source }: { source: Issue['source'] }) {
   return (
     <span className={cx('cc-source', source === 'Studio' && 'studio')}>
@@ -160,7 +204,28 @@ export default function App() {
   const [status, setStatus] = useState('All');
   const [source, setSource] = useState('All sources');
   const [query, setQuery] = useState('');
-  const [page, setPage] = useState(1);
+  const [epicFilter, setEpicFilter] = useState('');
+  const [storyFilter, setStoryFilter] = useState('');
+  const [labelFilter, setLabelFilter] = useState('');
+  const [listPage, setListPage] = useState(1);
+  const [groupBy, setGroupBy] = useState(() => {
+    try {
+      return localStorage.getItem('cc-studio-group-by') || 'None';
+    } catch {
+      return 'None';
+    }
+  });
+  useEffect(() => {
+    setListPage(1);
+  }, [status, source, query, epicFilter, storyFilter, labelFilter, groupBy]);
+  const [createParent, setCreateParent] = useState<number | undefined>();
+  useEffect(() => {
+    try {
+      localStorage.setItem('cc-studio-group-by', groupBy);
+    } catch {
+      /* Session preference remains available. */
+    }
+  }, [groupBy]);
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(() => {
     const match = window.location.hash.match(/^#issues\/(\d+)(?:\/aria)?$/);
@@ -175,6 +240,7 @@ export default function App() {
     return m ? Number(m[1]) : null;
   });
   const [notice, setNotice] = useState('');
+  const noticeRef = useIssueMotion(notice);
   const [syncing, setSyncing] = useState(false);
   const [leftOpen, setLeftOpen] = useState(true);
   const [dev, setDev] = useState(false);
@@ -192,8 +258,7 @@ export default function App() {
     setTab('Issues');
   };
   const backToIssues = () => {
-    if (window.history.state?.ccIssuePage) window.history.back();
-    else window.history.replaceState(null, '', '#issues');
+    window.history.pushState(null, '', '#issues');
     setSelectedId(null);
   };
   const navigateSection = (name: string) => {
@@ -223,8 +288,19 @@ export default function App() {
     }
   };
   const ticket = issues.find((i) => i.id === ticketId);
-  const update = (id: number, changes: Partial<Issue>) =>
-    setIssues((prev) => prev.map((i) => (i.id === id ? { ...i, ...changes } : i)));
+  const update = (id: number, changes: Partial<Issue>) => {
+    const original = issues.find((i) => i.id === id);
+    if (!original) return;
+    const candidate = { ...original, ...changes, updatedAt: new Date().toISOString() };
+    const error = validateIssue(candidate, issues);
+    if (error) {
+      setNotice(error);
+      return;
+    }
+    setIssues((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, ...changes, updatedAt: candidate.updatedAt } : i)),
+    );
+  };
   const updateRun = (id: number, changes: Partial<Run>) =>
     setIssues((prev) =>
       prev.map((i) => (i.id === id && i.run ? { ...i, run: { ...i.run, ...changes } } : i)),
@@ -242,9 +318,6 @@ export default function App() {
     const timer = setTimeout(() => setNotice(''), 3800);
     return () => clearTimeout(timer);
   }, [notice]);
-  useEffect(() => {
-    setPage(1);
-  }, [status, source, query]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (
@@ -281,9 +354,30 @@ export default function App() {
               changed = true;
               return {
                 ...i,
-                status: step === count ? ('In review' as Status) : i.status,
+                status: step === count ? ('Completed' as const) : ('AI Working' as const),
+                workItems: (i.workItems || []).map((work) => {
+                  const taskIndex = i
+                    .run!.tasks.filter((t) => t.enabled)
+                    .findIndex((t) => t.workItemId === work.id);
+                  if (taskIndex < 0 || work.status === 'Completed') return work;
+                  const status =
+                    taskIndex < step
+                      ? ('Completed' as const)
+                      : taskIndex === step
+                        ? ('AI Working' as const)
+                        : ('To Do' as const);
+                  return {
+                    ...work,
+                    status,
+                    updatedAt: new Date().toISOString(),
+                    subtasks: work.subtasks.map((sub) =>
+                      sub.status === 'Completed' ? sub : { ...sub, status },
+                    ),
+                  };
+                }),
                 run: {
                   ...i.run,
+                  verified: step === count,
                   step,
                   phase: step === count ? ('completed' as Phase) : ('executing' as Phase),
                   startedAt: step === count ? undefined : i.run.startedAt,
@@ -304,59 +398,107 @@ export default function App() {
         (i) =>
           (status === 'All' || i.status === status) &&
           (source === 'All sources' || i.source === source) &&
-          `${i.title} ${i.id} ${i.label}`.toLowerCase().includes(query.toLowerCase()),
+          (!epicFilter || association(i, issues, 'Epic')?.id === Number(epicFilter)) &&
+          (!storyFilter || association(i, issues, 'Story')?.id === Number(storyFilter)) &&
+          (!labelFilter || hasLabel(i, labelFilter)) &&
+          searchIssue(i, issues, query),
       ),
-    [issues, status, source, query],
+    [issues, status, source, query, epicFilter, storyFilter, labelFilter],
   );
-  const maxPage = Math.max(1, Math.ceil(filtered.length / 8));
-  const currentPage = Math.min(page, maxPage);
-  const shown = filtered.slice((currentPage - 1) * 8, currentPage * 8);
+  const makeRun = (issue: Issue, instructions: string): Run => {
+    const work = issue.workItems || [];
+    const hasChildren = issues.some((i) => i.parentIssueId === issue.id);
+    return {
+      id: uid(),
+      planId: uid(),
+      phase: 'analyzing',
+      instructions,
+      mode: 'preview',
+      step: 0,
+      startedAt: Date.now(),
+      tasks: work.length
+        ? work
+            .filter((w) => w.status !== 'Completed')
+            .map((w, index) => ({
+              id: index + 1,
+              workItemId: w.id,
+              title: w.title,
+              detail: w.description,
+              subtasks: w.subtasks.map((s) => s.title),
+              agent: w.assignee || 'Aria',
+              enabled: true,
+            }))
+        : hasChildren
+          ? []
+          : taskPlan(issue.title),
+    };
+  };
   const start = (id: number, instructions: string) => {
     const issue = issues.find((i) => i.id === id)!;
+    const run = makeRun(issue, instructions);
     update(id, {
-      assignee: 'Aria',
-      run: {
-        phase: 'analyzing',
-        instructions,
-        tasks: taskPlan(issue.title),
-        step: 0,
-        startedAt: Date.now(),
-      },
+      run,
+      draftPlanId: run.planId,
+      runHistory: issue.run ? [...(issue.runHistory || []), issue.run] : issue.runHistory,
     });
   };
   const approve = (id: number) => {
     const issue = issues.find((i) => i.id === id)!;
+    if (!issue.run || issue.run.phase !== 'plan' || !issue.run.tasks.some((t) => t.enabled)) return;
+    let run: Run = {
+      ...issue.run,
+      phase: 'executing',
+      approvedAt: new Date().toISOString(),
+      step: 0,
+      startedAt: Date.now(),
+    };
+    const workItems = reconcileApprovedWork(issue, run);
+    run = {
+      ...run,
+      tasks: run.tasks.map((t) => ({
+        ...t,
+        workItemId:
+          t.workItemId ||
+          workItems.find((w) => w.planId === run.planId && w.id.endsWith(`-task-${t.id}`))?.id,
+      })),
+    };
+    const first = run.tasks.find((t) => t.enabled)?.workItemId;
     update(id, {
-      status: 'In progress',
-      assignee: 'Aria',
-      run: { ...issue.run!, phase: 'executing', step: 0, startedAt: Date.now() },
+      status: 'AI Working',
+      approvedPlanId: run.planId,
+      draftPlanId: undefined,
+      run,
+      workItems: workItems.map((w) => ({
+        ...w,
+        runId: run.tasks.some((t) => t.workItemId === w.id) ? run.id : w.runId,
+        status: w.id === first && w.status !== 'Completed' ? 'AI Working' : w.status,
+      })),
     });
   };
-  const create = (title: string, description: string, priority: Priority, plan: boolean) => {
+  const create = (draft: Issue, plan: boolean) => {
     const id = Math.max(...issues.map((i) => i.id), 0) + 1;
-    setIssues((prev) => [
-      {
-        id,
-        title,
-        description,
-        priority,
-        status: 'To do',
-        label: 'Feature',
-        source: 'Studio',
-        assignee: '',
-        comments: 0,
-        date: 'Just now',
-      },
-      ...prev,
-    ]);
+    const issue = { ...draft, id };
+    if (plan) {
+      issue.run = makeRun(issue, '');
+      issue.draftPlanId = issue.run.planId;
+    }
+    setIssues((prev) => [issue, ...prev]);
     setCreateOpen(false);
-    setStatus('All');
-    setSource('All sources');
-    setQuery('');
-    setPage(1);
+    setCreateParent(undefined);
     setNotice('Issue created');
     openIssue(id);
-    if (plan) openAria(id);
+  };
+  const openCreate = (parent?: number) => {
+    setCreateParent(parent);
+    setCreateOpen(true);
+  };
+  const clearFilters = () => {
+    setQuery('');
+    setSource('All sources');
+    setStatus('All');
+    setEpicFilter('');
+    setStoryFilter('');
+    setLabelFilter('');
   };
   const existingAction = (name: string) => setNotice(`${name} is unavailable right now.`);
   const openTicket = (id: number) => {
@@ -414,7 +556,7 @@ export default function App() {
         <div className="cc-ticket-preview-meta">
           <Source source={ticket.source} />
           <span className={cx('cc-status', ticket.status.toLowerCase().replaceAll(' ', '-'))}>
-            <StatusMark status={ticket.status} />
+            <StatusBadge issue={ticket} />
             {ticket.status}
           </span>
         </div>
@@ -686,6 +828,11 @@ export default function App() {
               <IssueDetails
                 key={selected.id}
                 issue={selected}
+                issues={issues}
+                onOpen={openIssue}
+                onFix={openAria}
+                onCreateChild={openCreate}
+                onAssociate={(id, parentIssueId) => update(id, { parentIssueId })}
                 onClose={backToIssues}
                 onChange={(c) => update(selected.id, c)}
                 ariaWorkflow={
@@ -697,8 +844,12 @@ export default function App() {
                     onRunUpdate={(changes) => updateRun(selected.id, changes)}
                     onApprove={() => approve(selected.id)}
                     onDone={() => {
-                      update(selected.id, { status: 'Done' });
-                      setNotice('Issue marked as done');
+                      if (!selected.run?.verified) {
+                        setNotice('Verification is required before completion.');
+                        return;
+                      }
+                      update(selected.id, { status: 'Completed' });
+                      setNotice('Issue completed');
                     }}
                   />
                 }
@@ -733,7 +884,7 @@ export default function App() {
                       <RefreshCw size={14} className={syncing ? 'spin' : ''} />
                     </button>
                   </div>
-                  <button className="button primary" onClick={() => setCreateOpen(true)}>
+                  <button className="button primary" onClick={() => openCreate()}>
                     <Plus size={16} />
                     New issue
                   </button>
@@ -745,6 +896,19 @@ export default function App() {
                     <button
                       key={s}
                       role="tab"
+                      onKeyDown={(e) => {
+                        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                          e.preventDefault();
+                          const options = ['All', ...statuses];
+                          const index =
+                            (options.indexOf(s) +
+                              (e.key === 'ArrowRight' ? 1 : -1) +
+                              options.length) %
+                            options.length;
+                          setStatus(options[index]);
+                          (e.currentTarget.parentElement?.children[index] as HTMLElement)?.focus();
+                        }
+                      }}
                       aria-selected={status === s}
                       className={status === s ? 'active' : ''}
                       onClick={() => setStatus(s)}
@@ -787,6 +951,65 @@ export default function App() {
                   <option value="Studio">Created in CC Studio</option>
                   <option value="GitLab">Created in GitLab</option>
                 </select>
+                <select
+                  aria-label="Filter by Epic"
+                  value={epicFilter}
+                  onChange={(e) => {
+                    setEpicFilter(e.target.value);
+                    setStoryFilter('');
+                  }}
+                >
+                  <option value="">All Epics</option>
+                  {issues
+                    .filter((i) => hasLabel(i, 'Epic'))
+                    .map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.title}
+                      </option>
+                    ))}
+                </select>
+                <select
+                  aria-label="Filter by Story"
+                  value={storyFilter}
+                  onChange={(e) => setStoryFilter(e.target.value)}
+                >
+                  <option value="">All Stories</option>
+                  {issues
+                    .filter(
+                      (i) =>
+                        hasLabel(i, 'Story') &&
+                        (!epicFilter || i.parentIssueId === Number(epicFilter)),
+                    )
+                    .map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.title}
+                      </option>
+                    ))}
+                </select>
+                <select
+                  aria-label="Filter by label"
+                  value={labelFilter}
+                  onChange={(e) => setLabelFilter(e.target.value)}
+                >
+                  <option value="">All labels</option>
+                  {[...new Set([...issueLabels, ...issues.flatMap(labelsOf)])].map((label) => (
+                    <option key={label}>{label}</option>
+                  ))}
+                </select>
+                {issueView === 'list' && (
+                  <label className="cc-group-control">
+                    Group by
+                    <select
+                      aria-label="Group by"
+                      value={groupBy}
+                      onChange={(e) => setGroupBy(e.target.value)}
+                    >
+                      {['None', 'Epic', 'Story'].map((g) => (
+                        <option key={g}>{g}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <span className="cc-filtered-count">{filtered.length} issues</span>
                 <div className="cc-view-toggle" role="group" aria-label="Issue view">
                   <button
@@ -815,133 +1038,26 @@ export default function App() {
                       onOpen={openIssue}
                       onFix={openAria}
                       onTicket={openTicket}
-                      onMove={(id, nextStatus) => {
-                        update(id, { status: nextStatus });
-                        setNotice(`Issue #${id} moved to ${nextStatus}`);
-                      }}
+                      allIssues={issues}
                     />
                   </div>
                   <div className="cc-board-hint">
                     <span>{filtered.length} issues · grouped by status</span>
-                    <span>Drag to move, or use a card’s dropdown</span>
+                    <span>Status follows approved execution</span>
                   </div>
                 </>
               ) : (
-                <>
-                  <div className="cc-table-scroll">
-                    <table className="cc-issue-table">
-                      <thead>
-                        <tr>
-                          <th>Issue</th>
-                          <th>Status</th>
-                          <th>Created in</th>
-                          <th>GitLab ticket</th>
-                          <th>
-                            <span className="cc-table-aria">
-                              <Sparkles size={13} />
-                              Aria
-                            </span>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {shown.map((i) => (
-                          <tr key={i.id}>
-                            <td>
-                              <button className="cc-issue-title" onClick={() => openIssue(i.id)}>
-                                {i.title}
-                              </button>
-                              <div className="cc-issue-subline">
-                                <span className={cx('cc-type', i.label.toLowerCase())}>
-                                  {i.label}
-                                </span>
-                                <span className={cx('cc-priority', i.priority.toLowerCase())}>
-                                  <i />
-                                  {i.priority}
-                                </span>
-                              </div>
-                            </td>
-                            <td>
-                              <button
-                                className={cx(
-                                  'cc-status',
-                                  i.status.toLowerCase().replaceAll(' ', '-'),
-                                )}
-                                onClick={() => openIssue(i.id)}
-                              >
-                                <StatusMark status={i.status} />
-                                {i.status}
-                              </button>
-                            </td>
-                            <td>
-                              <Source source={i.source} />
-                            </td>
-                            <td>
-                              <a
-                                className="cc-ticket"
-                                href={`#gitlab-issue-${i.id}`}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openTicket(i.id);
-                                }}
-                                aria-label={`View GitLab ticket #${i.id}`}
-                              >
-                                <span>#{i.id}</span>
-                                <ExternalLink size={12} />
-                              </a>
-                            </td>
-                            <td>
-                              <AriaAction issue={i} onClick={() => openAria(i.id)} />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {!shown.length && (
-                      <div className="cc-empty">
-                        <Search size={25} />
-                        <h3>No issues found</h3>
-                        <p>Try another search or choose a different filter.</p>
-                        <button
-                          className="button"
-                          onClick={() => {
-                            setQuery('');
-                            setSource('All sources');
-                            setStatus('All');
-                          }}
-                        >
-                          Clear filters
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="cc-pagination">
-                    <span>
-                      {filtered.length
-                        ? `${(currentPage - 1) * 8 + 1}–${Math.min(currentPage * 8, filtered.length)} of ${filtered.length} issues`
-                        : '0 issues'}
-                    </span>
-                    <div>
-                      <button
-                        aria-label="Previous page"
-                        disabled={currentPage === 1}
-                        onClick={() => setPage(currentPage - 1)}
-                      >
-                        <ChevronLeft size={16} />
-                      </button>
-                      <span>
-                        {currentPage} <small>/ {maxPage}</small>
-                      </span>
-                      <button
-                        aria-label="Next page"
-                        disabled={currentPage === maxPage}
-                        onClick={() => setPage(currentPage + 1)}
-                      >
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </>
+                <IssueList
+                  page={listPage}
+                  onPage={setListPage}
+                  issues={filtered}
+                  allIssues={issues}
+                  groupBy={groupBy}
+                  onOpen={openIssue}
+                  onFix={openAria}
+                  onTicket={openTicket}
+                  onClear={clearFilters}
+                />
               )}
               <div className="cc-aria-note">
                 <AriaAvatar small />
@@ -960,9 +1076,16 @@ export default function App() {
           Changes are available for this session only; browser storage is unavailable.
         </div>
       )}
-      {createOpen && <CreateIssue onClose={() => setCreateOpen(false)} onCreate={create} />}
+      {createOpen && (
+        <CreateIssue
+          issues={issues}
+          parentId={createParent}
+          onClose={() => setCreateOpen(false)}
+          onCreate={create}
+        />
+      )}
       {notice && (
-        <div className="cc-toast" role="status">
+        <div ref={noticeRef} className="cc-toast" role="status">
           <CheckCircle2 size={17} />
           {notice}
           <button aria-label="Dismiss notification" onClick={() => setNotice('')}>
@@ -974,97 +1097,32 @@ export default function App() {
   );
 }
 
-function CreateIssue({
-  onClose,
-  onCreate,
-}: {
-  onClose: () => void;
-  onCreate: (title: string, description: string, priority: Priority, plan: boolean) => void;
-}) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<Priority>('Medium');
-  const [plan, setPlan] = useState(true);
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    if (title.trim()) onCreate(title.trim(), description.trim(), priority, plan);
-  };
-  return (
-    <Modal title="New issue" subtitle="Add a task to Realtime Dashboard." onClose={onClose} drawer>
-      <form onSubmit={submit}>
-        <div className="modal-body form-stack">
-          <label>
-            Issue title{' '}
-            <span className="cc-required" aria-hidden="true">
-              *
-            </span>
-            <input
-              autoFocus
-              required
-              maxLength={160}
-              placeholder="What needs to be done?"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </label>
-          <label>
-            Description<span className="optional">Optional</span>
-            <textarea
-              rows={6}
-              placeholder="Describe the expected outcome or what needs fixing..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </label>
-          <label>
-            Priority
-            <select value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-              {['High', 'Medium', 'Low'].map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
-          </label>
-          <div className="cc-create-source">
-            <Source source="Studio" />
-            <span>Created here, linked to a GitLab ticket.</span>
-            <Gitlab size={16} />
-          </div>
-          <label className="cc-plan-checkbox">
-            <input type="checkbox" checked={plan} onChange={(e) => setPlan(e.target.checked)} />
-            <span>
-              <strong>Make a plan with Aria</strong>
-              <small>Review the tasks before anything starts.</small>
-            </span>
-            <AriaAvatar small />
-          </label>
-        </div>
-        <div className="modal-footer">
-          <button type="button" className="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="button primary" disabled={!title.trim()}>
-            {plan ? <Sparkles size={15} /> : <Plus size={15} />}{' '}
-            {plan ? 'Create & plan' : 'Create issue'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
 function IssueDetails({
   issue,
+  issues,
+  onOpen,
+  onFix,
+  onCreateChild,
+  onAssociate,
   onClose,
   onChange,
   ariaWorkflow,
   onTicket,
 }: {
   issue: Issue;
+  issues: Issue[];
+  onOpen: (id: number) => void;
+  onFix: (id: number) => void;
+  onCreateChild: (parent: number) => void;
+  onAssociate: (id: number, parentId: number | null) => void;
   onClose: () => void;
   onChange: (changes: Partial<Issue>) => void;
   ariaWorkflow: ReactNode;
   onTicket: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [organizing, setOrganizing] = useState(false);
+  const detailMotion = useIssueMotion(issue.id);
   const [title, setTitle] = useState(issue.title);
   const [description, setDescription] = useState(issue.description);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -1084,12 +1142,19 @@ function IssueDetails({
           Back to issues
         </button>
         <span>
-          Realtime Dashboard <ChevronRight size={12} /> Issue #{issue.id}
+          <button onClick={onClose}>Issues</button>
+          {ancestors(issue, issues).map((parent) => (
+            <span key={parent.id} className="cc-breadcrumb-parent">
+              <ChevronRight size={12} />
+              <button onClick={() => onOpen(parent.id)}>{parent.title}</button>
+            </span>
+          ))}
+          <ChevronRight size={12} /> Issue #{issue.id}
         </span>
       </div>
       <header className="cc-issue-page-header cc-integrated-header">
         <div className="cc-detail-kicker">
-          <span className={`cc-type ${issue.label.toLowerCase()}`}>{issue.label}</span>
+          <IssueLabels issue={issue} />
           <span>ISSUE #{issue.id}</span>
         </div>
         {editing ? (
@@ -1123,17 +1188,11 @@ function IssueDetails({
           </button>
         </div>
         <div className="cc-issue-properties cc-header-properties" aria-label="Issue properties">
-          <label>
-            Status
-            <select
-              value={issue.status}
-              onChange={(e) => onChange({ status: e.target.value as Status })}
-            >
-              {statuses.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </label>
+          <div className="cc-status-property">
+            <span>Status</span>
+            <StatusBadge issue={issue} />
+            <SecondaryBadge issue={issue} />
+          </div>
           <label>
             Priority
             <select
@@ -1146,8 +1205,59 @@ function IssueDetails({
             </select>
           </label>
         </div>
+        <div className="cc-organize-line">
+          <span>
+            Assigned to <strong>{issue.assignee || 'Unassigned'}</strong>
+          </span>
+          {ancestors(issue, issues)
+            .filter((p) => hasLabel(p, 'Epic') || hasLabel(p, 'Story'))
+            .map((p) => (
+              <button key={p.id} onClick={() => onOpen(p.id)}>
+                <span className={`cc-type ${hasLabel(p, 'Epic') ? 'epic' : 'story'}`}>
+                  {hasLabel(p, 'Epic') ? 'Epic' : 'Story'}
+                </span>
+                {p.title}
+              </button>
+            ))}
+          <button
+            className="text-button"
+            onClick={() => setOrganizing(!organizing)}
+            aria-expanded={organizing}
+          >
+            Edit labels & relationships
+          </button>
+        </div>
+        {organizing && (
+          <div className="cc-organize-editor">
+            <LabelPicker
+              value={labelsOf(issue)}
+              extra={issues.flatMap(labelsOf)}
+              onChange={(labels) =>
+                onChange({
+                  labels,
+                  label: labels[0] || '',
+                  parentIssueId: labels.includes('Epic') ? null : issue.parentIssueId,
+                })
+              }
+            />
+            <ParentFields
+              issue={issue}
+              issues={issues}
+              onChange={(parentIssueId) => onChange({ parentIssueId })}
+            />
+            <label>
+              Assignee
+              <input
+                aria-label="Issue assignee"
+                value={issue.assignee}
+                placeholder="Unassigned"
+                onChange={(e) => onChange({ assignee: e.target.value })}
+              />
+            </label>
+          </div>
+        )}
       </header>
-      <div className="cc-issue-page-grid">
+      <div ref={detailMotion} className="cc-issue-page-grid">
         <div className="cc-issue-page-content">
           <section className="cc-description-section">
             <div className="cc-section-heading">
@@ -1189,6 +1299,14 @@ function IssueDetails({
               </p>
             )}
           </section>
+          <ChildIssues
+            issue={issue}
+            issues={issues}
+            onOpen={onOpen}
+            onFix={onFix}
+            onCreate={onCreateChild}
+            onAssociate={onAssociate}
+          />
           <section className="cc-page-aria">
             <div className="cc-aria-section-mascot">
               <AriaAvatar />
@@ -1197,7 +1315,7 @@ function IssueDetails({
               <div>
                 <span className="cc-section-eyebrow">YOUR CODING TEAMMATE</span>
                 <h2>
-                  {issue.status === 'Done'
+                  {issue.status === 'Completed'
                     ? 'This issue is complete'
                     : issue.run
                       ? phaseLabels[issue.run.phase]
@@ -1206,8 +1324,8 @@ function IssueDetails({
               </div>
             </div>
             <p>
-              {issue.status === 'Done'
-                ? 'The issue has been marked as resolved. You can revisit its status in the details panel.'
+              {issue.status === 'Completed'
+                ? 'The required work has been completed. Its tasks and history remain available below.'
                 : issue.run
                   ? 'Review the proposed tasks or follow Aria’s progress on this issue.'
                   : 'Aria turns this issue into a clear plan, then handles the code. You review and approve before execution starts.'}

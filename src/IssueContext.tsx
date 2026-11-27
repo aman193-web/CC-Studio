@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import {
   Activity,
-  CheckCircle2,
   Circle,
+  CheckCircle2,
   GitBranch,
   ImagePlus,
   ListTree,
@@ -12,6 +12,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { Issue } from './data';
+import { WorkItems } from './WorkItems';
+import { useIssueMotion } from './IssueHierarchy';
 
 export function IssueContext({
   issue,
@@ -24,12 +26,13 @@ export function IssueContext({
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
   const upload = useRef<HTMLInputElement>(null);
-  const tasks = issue.run?.tasks.filter((t) => t.enabled) || [];
+  const tasks = issue.workItems || [];
+  const panelRef = useIssueMotion(tab);
   const notes = issue.notes || [];
   const media = issue.media || [];
   const tabs = [
     { name: 'Activity', icon: Activity, count: null },
-    { name: 'Child tasks', icon: ListTree, count: tasks.length },
+    { name: 'Tasks', icon: ListTree, count: tasks.length },
     { name: 'Media', icon: Paperclip, count: media.length },
     { name: 'Comments', icon: MessageSquare, count: issue.comments + notes.length },
   ];
@@ -63,6 +66,18 @@ export function IssueContext({
           <button
             key={name}
             role="tab"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                const index =
+                  (tabs.findIndex((t) => t.name === name) +
+                    (e.key === 'ArrowRight' ? 1 : -1) +
+                    tabs.length) %
+                  tabs.length;
+                setTab(tabs[index].name);
+                (e.currentTarget.parentElement?.children[index] as HTMLElement)?.focus();
+              }
+            }}
             id={`context-tab-${name.replace(' ', '-')}`}
             aria-controls="issue-context-panel"
             aria-selected={tab === name}
@@ -75,6 +90,7 @@ export function IssueContext({
         ))}
       </div>
       <div
+        ref={panelRef}
         id="issue-context-panel"
         role="tabpanel"
         aria-labelledby={`context-tab-${tab.replace(' ', '-')}`}
@@ -113,7 +129,7 @@ export function IssueContext({
                             : 'Aria is analyzing this issue'}
                   </strong>
                   <small>
-                    {tasks.length} child tasks ·{' '}
+                    {tasks.length} implementation tasks ·{' '}
                     {issue.run.phase === 'executing' || issue.run.phase === 'completed'
                       ? 'Plan approved'
                       : 'Waiting for your approval'}
@@ -121,6 +137,19 @@ export function IssueContext({
                 </p>
               </div>
             )}
+            {(issue.runHistory || []).map((run, index) => (
+              <div key={run.id || index}>
+                <span className="cc-activity-dot purple">
+                  <Activity size={12} />
+                </span>
+                <p>
+                  <strong>Previous Aria run · {run.phase}</strong>
+                  <small>
+                    {run.step} tasks completed · {run.approvedAt ? 'Approved plan' : 'Draft plan'}
+                  </small>
+                </p>
+              </div>
+            ))}
             {notes.map((note) => (
               <div key={note.id}>
                 <span className="cc-activity-dot">
@@ -143,37 +172,7 @@ export function IssueContext({
             </div>
           </div>
         )}
-        {tab === 'Child tasks' &&
-          (tasks.length ? (
-            <div className="cc-compact-tasks">
-              {tasks.map((task, index) => (
-                <details key={task.id}>
-                  <summary>
-                    {issue.run?.phase === 'completed' || index < (issue.run?.step || 0) ? (
-                      <CheckCircle2 size={15} />
-                    ) : (
-                      <Circle size={15} />
-                    )}
-                    <span>{task.title}</span>
-                    <small>{task.subtasks?.length || 0} steps</small>
-                  </summary>
-                  <ul>
-                    {task.subtasks?.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                  </ul>
-                </details>
-              ))}
-            </div>
-          ) : (
-            <div className="cc-context-empty">
-              <ListTree size={21} />
-              <div>
-                <strong>No child tasks yet</strong>
-                <p>Aria’s proposed tasks will appear here after analysis.</p>
-              </div>
-            </div>
-          ))}
+        {tab === 'Tasks' && <WorkItems issue={issue} onChange={onChange} />}
         {tab === 'Media' && (
           <>
             <div className="cc-media-toolbar">
@@ -285,8 +284,8 @@ export function IssueContext({
 
 export function IssueBranch({ issue }: { issue: Issue }) {
   const [copied, setCopied] = useState(false);
-  const available = issue.run?.phase === 'executing' || issue.run?.phase === 'completed';
-  const branch = `aria/issue-${issue.id}`;
+  const branch = issue.run?.branch;
+  const available = Boolean(branch);
   return (
     <div className="cc-branch-property">
       <span className="cc-field-label">
@@ -299,7 +298,7 @@ export function IssueBranch({ issue }: { issue: Issue }) {
             className="cc-branch-name"
             onClick={async () => {
               try {
-                await navigator.clipboard.writeText(branch);
+                await navigator.clipboard.writeText(branch || '');
                 setCopied(true);
               } catch {
                 setCopied(false);

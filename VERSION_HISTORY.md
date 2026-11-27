@@ -23,3 +23,11 @@ The user liked this version and explicitly asked that it be kept separately. It 
 The snapshot includes source, dependencies/lockfile, build configuration, public assets, and original README. The frozen build can be opened on the same dev server without rebuilding or switching branches.
 
 Aria actions and ticket previews now use dedicated in-tab pages at `/#issues/<id>/aria` and `/#issues/<id>/ticket`, retaining the Studio header, navigation, and assistant panel. All workflow stages remain inside Issues, with back/history support. New issue stays a right-side drawer.
+
+## Batch 1 — hierarchy and independent work
+
+Branch: `design/next-two-batches`. The pre-batch version is preserved on `snapshots/current-2026-11-27` at `53fbdcc`; `main` is unchanged.
+
+Batch 1 supersedes the four-column board and manual status movement described above. It adds Epic/Story labels on the unified Issue model, validated parent links, grouped List and filtered three-column Board views, shared creation/editing, independent tasks/subtasks, and data-preserving migration. Primary statuses are To Do, AI Working, and Completed; execution alone controls AI Working. Details remain inline in Issues, with compact properties in the title/byline area and no chat sidebar.
+
+Batch state uses `cc-studio-issues-batch1`, migrating from the original v2 key without overwriting it. Fresh sample data adds Epic/Story hierarchy around existing examples; existing sessions are not replaced with sample data. See README for migration and preview-execution boundaries. Batch 2 label-aware generation and read-only execution panel are not implemented in Batch 1.

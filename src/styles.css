@@ -971,13 +971,10 @@ select {
   color: #76658a;
   white-space: nowrap;
 }
-.cc-status.in-progress {
+.cc-status.ai-working {
   color: #776090;
 }
-.cc-status.in-review {
-  color: #907d60;
-}
-.cc-status.done {
+.cc-status.completed {
   color: #658b70;
 }
 .cc-progress-dot {

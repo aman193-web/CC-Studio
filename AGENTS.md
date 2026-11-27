@@ -15,3 +15,13 @@
 - Aria workflow now stays inline within issue details, directly below “Let Aria take it from here”; no separate Aria route navigation. Board/list Aria actions open the detail page and scroll to this section. Keep headings, subheadings, and line spacing compact.
 
 - The Issues tab (including issue details and Aria) uses the full workspace width with the left chat panel and its toggle hidden. Other tabs retain their previous assistant-panel preference.
+
+## Batch 1 decisions (supersede conflicting v2 notes above)
+- Work on `design/next-two-batches`; preserve `main`, `snapshots/current-2026-11-27`, and all v1 files.
+- Unified issues support multi-label Epic/Story/Task/etc.; Epic and Story are mutually exclusive. `parentIssueId` is authoritative, with derived ancestor associations and validation in `issueModel.ts`.
+- Primary statuses are exactly To Do, AI Working, Completed. Do not restore manual status moves or drag-to-execute. Planning, clarification and approval are secondary indicators. Preview execution is not production execution.
+- Preserve issue/task assignment information; Batch 1 explicitly requests assignment fields, superseding the earlier Aria-only UI restriction.
+- Keep independent `workItems` separate from draft `run.tasks`; reconcile stable IDs on approval and never duplicate child issues into tasks. Preserve completed work and history.
+- State key is `cc-studio-issues-batch1`; migrate v2 safely without overwriting its original storage. Fresh sample hierarchy must never replace the user's existing data.
+- Label-aware generation and the two-panel Aria execution experience belong to Batch 2. Run/event/artifact references are only a foundation in Batch 1.
+- Run `npm run check`, `npm test`, and `npm run build`. Node 22.18+ supports the model tests. Use isolated browser contexts for destructive QA changes.
