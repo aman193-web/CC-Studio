@@ -983,10 +983,52 @@ function IssueDetails({
     onChange({ title: title.trim(), description: description.trim() });
     setEditing(false);
   };
+  const issueDescription = (
+    <section className="cc-description-section">
+      <div className="cc-section-heading">
+        <h2>Description</h2>
+        {!editing ? (
+          <button className="text-button" onClick={() => setEditing(true)}>
+            <Pencil size={13} />
+            Edit issue
+          </button>
+        ) : (
+          <div className="cc-edit-actions">
+            <button
+              className="button"
+              onClick={() => {
+                setTitle(issue.title);
+                setDescription(issue.description);
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </button>
+            <button className="button primary" disabled={!title.trim()} onClick={save}>
+              Save changes
+            </button>
+          </div>
+        )}
+      </div>
+      {editing ? (
+        <textarea
+          aria-label="Issue description"
+          rows={8}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      ) : (
+        <p>
+          {issue.description ||
+            'No description added yet. Add context to help your team get started.'}
+        </p>
+      )}
+    </section>
+  );
   const issueHeader = (
     <header className="cc-issue-page-header cc-integrated-header">
       <div className="cc-detail-kicker">
-        <IssueLabels issue={issue} />
+        {layout !== 'split' && <IssueLabels issue={issue} />}
         <span>ISSUE #{issue.id}</span>
       </div>
       {editing ? (
@@ -1004,6 +1046,7 @@ function IssueDetails({
           {issue.title}
         </h1>
       )}
+      {layout === 'split' && issueDescription}
       <div className="cc-detail-byline">
         <span>
           Created in <Source source={issue.source} />
@@ -1064,48 +1107,7 @@ function IssueDetails({
       </div>
     </header>
   );
-  const issueDescription = (
-    <section className="cc-description-section">
-      <div className="cc-section-heading">
-        <h2>Description</h2>
-        {!editing ? (
-          <button className="text-button" onClick={() => setEditing(true)}>
-            <Pencil size={13} />
-            Edit issue
-          </button>
-        ) : (
-          <div className="cc-edit-actions">
-            <button
-              className="button"
-              onClick={() => {
-                setTitle(issue.title);
-                setDescription(issue.description);
-                setEditing(false);
-              }}
-            >
-              Cancel
-            </button>
-            <button className="button primary" disabled={!title.trim()} onClick={save}>
-              Save changes
-            </button>
-          </div>
-        )}
-      </div>
-      {editing ? (
-        <textarea
-          aria-label="Issue description"
-          rows={8}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      ) : (
-        <p>
-          {issue.description ||
-            'No description added yet. Add context to help your team get started.'}
-        </p>
-      )}
-    </section>
-  );
+
   return (
     <section
       className={`cc-issue-page ${layout === 'split' ? 'sw-page' : ''}`}
@@ -1140,7 +1142,6 @@ function IssueDetails({
           issue={issue}
           issues={issues}
           header={issueHeader}
-          description={issueDescription}
           controls={ariaControls}
           onOpen={onOpen}
           onChange={onChange}

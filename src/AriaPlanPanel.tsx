@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   CircleHelp,
   LoaderCircle,
   Pencil,
@@ -397,9 +398,9 @@ export function AriaPlanPanel({
                     className="button primary ap-start"
                     onClick={() => controls.start(instructions)}
                   >
-                    <Sparkles size={16} /> Fix with Aria
+                    <Sparkles size={16} /> Fix with Aria{' '}
+                    <ChevronRight size={16} className="sw-start-arrow" />
                   </button>
-                  <span>You approve before Aria starts.</span>
                 </div>
               )}
             </>
