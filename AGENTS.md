@@ -44,3 +44,5 @@ Latest UI refinement: table has a dedicated Priority column with compact tinted 
 - Pre-Batch-2 refinement is preserved at `c89c750` on `snapshots/pre-batch2-2026-11-27`. Work continues on `design/next-two-batches`.
 
 - Issue Details keeps its title, metadata and properties in a full-width header above the two-panel workspace. The idle Aria card uses a compact introduction with its action aligned right and expandable instructions below.
+
+- Latest UI refinement: remove prototype/demo notices and scenario controls from product screens. The implementation remains a session-only simulation; preserve that boundary in documentation and do not invent repository artifacts. Planning uses paced scope/writing updates (about 13–15 seconds), tasks take about 6–9 seconds. Awaiting approval is a hover/focus hint, and approval actions stay visible while plans scroll.

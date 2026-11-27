@@ -82,6 +82,7 @@ export interface Run {
   completedAt?: string;
   partial?: boolean;
   nextEventAt?: number;
+  planningStage?: number;
   artifacts?: RepositoryArtifact[];
   phase: Phase;
   instructions: string;

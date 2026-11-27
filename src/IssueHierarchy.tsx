@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, useId } from 'react';
 import type { ReactNode } from 'react';
 import { gsap } from 'gsap';
 import { CheckCircle2, ChevronDown, Circle, GitBranch, Plus, Sparkles } from 'lucide-react';
@@ -118,9 +118,13 @@ export function WorkTypePicker({
 }
 export function StatusBadge({ issue }: { issue: Pick<Issue, 'status' | 'run' | 'legacyStatus'> }) {
   const ref = useIssueMotion<HTMLSpanElement>(issue.status);
+  const hintId = useId();
+  const awaiting = issue.run?.phase === 'plan';
   return (
     <span
       ref={ref}
+      tabIndex={awaiting ? 0 : undefined}
+      aria-describedby={awaiting ? hintId : undefined}
       className={`cc-status ${issue.status.toLowerCase().replaceAll(' ', '-')}`}
       title={issue.status === 'AI Working' ? 'Aria is executing approved work' : undefined}
     >
@@ -132,12 +136,17 @@ export function StatusBadge({ issue }: { issue: Pick<Issue, 'status' | 'run' | '
         <Circle size={14} />
       )}
       {issue.status}
+      {awaiting && (
+        <span id={hintId} role="tooltip" className="cc-status-hint">
+          Awaiting approval
+        </span>
+      )}
     </span>
   );
 }
 export function SecondaryBadge({ issue }: { issue: Issue }) {
   const text = secondaryStatus(issue);
-  return text ? (
+  return text && issue.run?.phase !== 'plan' ? (
     <span
       className={`cc-secondary-state ${issue.run?.phase === 'clarification' ? 'needs-input' : ''}`}
     >

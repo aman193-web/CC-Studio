@@ -17,17 +17,24 @@ const make = (
   type = 'Issue',
   description = 'Implement the expected behavior with accessible feedback.',
 ) => ({ ...newIssueData(id, title, type === 'Issue' ? [] : [type]), description });
+const settlePlanning = (issues, id = 1) => {
+  let next = issues;
+  while (next.find((i) => i.id === id).run.phase === 'analyzing') {
+    next = tickDemo(next, next.find((i) => i.id === id).run.nextEventAt);
+  }
+  return next;
+};
 const ready = (issues, id = 1) => {
   const i = issues.find((i) => i.id === id);
-  return tickDemo(
+  return settlePlanning(
     issues.map((x) => (x.id === id ? { ...x, run: beginDemo(i, issues) } : x)),
-    Date.now() + 5000,
+    id,
   );
 };
 const finish = (issues, id = 1) => {
   let next = issues;
   for (let n = 0; n < 40 && next.find((i) => i.id === id).run.phase === 'executing'; n++)
-    next = tickDemo(next, Date.now() + 100000 + n * 2000);
+    next = tickDemo(next, next.find((i) => i.id === id).run.nextEventAt);
   return next;
 };
 test('type-aware plans are distinct and remain draft until exact approval', () => {
@@ -66,7 +73,7 @@ test('clarification waits for a response and resumes planning without execution'
   let state = ready([epic]);
   assert.equal(state[0].run.phase, 'clarification');
   const run = answerDemo(state[0], 'Email and password', state);
-  state = tickDemo([{ ...state[0], run }], Date.now() + 5000);
+  state = settlePlanning([{ ...state[0], run }]);
   assert.equal(state[0].run.phase, 'plan');
   assert.equal(state[0].status, 'To Do');
   assert.deepEqual(state[0].run.responses, ['Email and password']);
@@ -158,4 +165,22 @@ test('excluding an entire proposed Story leaves the Epic incomplete and supports
   state = finish(approveDemo(state, 1));
   assert.equal(state.length, 3);
   assert.equal(state[0].status, 'Completed');
+});
+
+test('planning and execution wait for paced updates', () => {
+  const issue = make(1, 'Add CSV export');
+  const run = beginDemo(issue, [issue]);
+  let state = [{ ...issue, run }];
+  assert.ok(run.nextEventAt - Date.now() >= 4000);
+  assert.equal(tickDemo(state, run.nextEventAt - 1)[0].run.events.length, 1);
+  state = tickDemo(state, run.nextEventAt);
+  assert.equal(state[0].run.phase, 'analyzing');
+  assert.equal(state[0].run.planningStage, 1);
+  state = settlePlanning(state);
+  state = approveDemo(state, 1);
+  assert.ok(state[0].run.nextEventAt - Date.now() >= 5000);
+  assert.equal(
+    tickDemo(state, state[0].run.nextEventAt - 1)[0].run.scope.some((task) => task.done),
+    false,
+  );
 });

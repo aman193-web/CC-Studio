@@ -298,8 +298,8 @@ export function CodeChangesPanel({ run }: { run: Run }) {
         ))
       ) : (
         <p>
-          This demonstration has not changed repository files, run tests, or created commits. Live
-          repository artifacts will appear here when available.
+          No code changes to show yet. Branches, commits and merge requests will appear here when
+          available.
         </p>
       )}
     </AriaDisclosure>
@@ -348,22 +348,14 @@ export function AriaPlanPanel({ issue, controls }: { issue: Issue; controls: Ari
                         : phase === 'cancelled'
                           ? 'Execution stopped'
                           : run?.partial
-                            ? 'Approved demonstration complete'
-                            : 'Demonstration complete'}
+                            ? 'Approved work complete'
+                            : 'Work complete'}
           </h2>
         </div>
         {phase === 'idle' && issue.status !== 'Completed' && (
           <button className="button primary ap-start" onClick={() => controls.start(instructions)}>
             <Sparkles size={16} /> Fix with Aria
           </button>
-        )}
-        {phase !== 'idle' && (
-          <span
-            className="ap-demo-badge"
-            title="Interactive demonstration; no production code is executed"
-          >
-            Demo run
-          </span>
         )}
       </div>
       {phase === 'idle' && (
@@ -396,13 +388,7 @@ export function AriaPlanPanel({ issue, controls }: { issue: Issue; controls: Ari
       {phase === 'analyzing' && (
         <div className="ap-preparing" role="status">
           <LoaderCircle size={18} className="spin" />
-          <p>
-            {workTypeOf(issue) === 'Epic'
-              ? 'Reviewing existing requirements and organizing the implementation scope.'
-              : workTypeOf(issue) === 'Story'
-                ? 'Breaking the user outcome into actionable implementation tasks.'
-                : 'Identifying the smallest useful change and verification steps.'}
-          </p>
+          <p>{run?.events?.at(-1)?.message || 'Preparing the implementation plan.'}</p>
         </div>
       )}
       {phase === 'clarification' && run?.clarification && (
@@ -501,7 +487,6 @@ export function AriaPlanPanel({ issue, controls }: { issue: Issue; controls: Ari
                 max={Math.max(1, total)}
               />
               <small>
-                Demonstration outcomes ·{' '}
                 {run?.partial
                   ? 'Other required work remains.'
                   : 'Existing completed work is preserved.'}
@@ -555,23 +540,6 @@ export function AriaPlanPanel({ issue, controls }: { issue: Issue; controls: Ari
           </div>
           {phase === 'plan' && (
             <>
-              <AriaDisclosure className="ap-demo-options">
-                <summary>Demonstration behavior</summary>
-                <label>
-                  Execution scenario
-                  <select
-                    aria-label="Execution scenario"
-                    value={run?.scenario || 'success'}
-                    onChange={(e) =>
-                      controls.update({ scenario: e.target.value as Run['scenario'] })
-                    }
-                  >
-                    <option value="success">Complete approved work</option>
-                    <option value="verification-blocker">Pause at a verification blocker</option>
-                  </select>
-                </label>
-                <p>No repository changes or production tests are performed.</p>
-              </AriaDisclosure>
               {revision && (
                 <div className="ap-revision">
                   <label>
@@ -639,7 +607,7 @@ export function AriaPlanPanel({ issue, controls }: { issue: Issue; controls: Ari
                   <strong>
                     {run?.partial
                       ? 'The approved scope is complete.'
-                      : 'All required demonstration work is complete.'}
+                      : 'All approved tasks have reached completion.'}
                   </strong>
                   <p>
                     {run?.partial

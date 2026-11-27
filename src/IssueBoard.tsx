@@ -1,8 +1,7 @@
-import { ExternalLink, ListTree, MessageSquare, Paperclip, GitBranch } from 'lucide-react';
+import { ExternalLink, ListTree, MessageSquare, Paperclip } from 'lucide-react';
 import { statuses } from './data';
 import type { Issue } from './data';
-import { IssueLabels, StatusBadge, SecondaryBadge } from './IssueHierarchy';
-import { ancestors } from './issueModel';
+import { IssueLabels, SecondaryBadge } from './IssueHierarchy';
 import { AriaAction } from './AriaAction';
 
 export function IssueBoard({
@@ -49,21 +48,12 @@ export function IssueBoard({
                     {issue.title}
                   </button>
                   <p className="cc-card-description">{issue.description}</p>
-                  {issue.parentIssueId && (
-                    <button className="cc-card-parent" onClick={() => onOpen(issue.parentIssueId!)}>
-                      {ancestors(issue, allIssues)
-                        .map((i) => i.title)
-                        .join(' / ')}
-                    </button>
+                  {(issue.run?.phase === 'clarification' || issue.run?.phase === 'blocked') && (
+                    <div className="cc-card-state">
+                      <SecondaryBadge issue={issue} />
+                    </div>
                   )}
-                  <div className="cc-card-state">
-                    <StatusBadge issue={issue} />
-                    <SecondaryBadge issue={issue} />
-                  </div>
-                  <div className="cc-card-origin">
-                    <span>
-                      Created in <b>{issue.source === 'Studio' ? 'CC Studio' : 'GitLab'}</b>
-                    </span>
+                  <div className="cc-card-meta">
                     <a
                       className="cc-ticket"
                       href={`#gitlab-issue-${issue.id}`}
@@ -76,34 +66,33 @@ export function IssueBoard({
                       #{issue.id}
                       <ExternalLink size={11} />
                     </a>
+                    <button
+                      className="cc-card-context"
+                      onClick={() => onOpen(issue.id)}
+                      aria-label={`View activity and context for issue #${issue.id}`}
+                    >
+                      {(allIssues.some((i) => i.parentIssueId === issue.id) ||
+                        !!issue.workItems?.length) && (
+                        <span title="Child issues and tasks">
+                          <ListTree size={13} />
+                          {allIssues.filter((i) => i.parentIssueId === issue.id).length +
+                            (issue.workItems?.length || 0)}
+                        </span>
+                      )}
+                      {!!(issue.comments + (issue.notes?.length || 0)) && (
+                        <span title="Comments">
+                          <MessageSquare size={13} />
+                          {issue.comments + (issue.notes?.length || 0)}
+                        </span>
+                      )}
+                      {!!issue.media?.length && (
+                        <span title="Attached media">
+                          <Paperclip size={13} />
+                          {issue.media.length}
+                        </span>
+                      )}
+                    </button>
                   </div>
-                  <button
-                    className="cc-card-context"
-                    onClick={() => onOpen(issue.id)}
-                    aria-label={`View activity and context for issue #${issue.id}`}
-                  >
-                    <span title="Child tasks">
-                      <ListTree size={12} />
-                      {
-                        allIssues.filter(
-                          (i) => i.parentIssueId === issue.id && i.status === 'Completed',
-                        ).length
-                      }
-                      /{allIssues.filter((i) => i.parentIssueId === issue.id).length} children ·{' '}
-                      {issue.workItems?.length || 0} tasks
-                    </span>
-                    <span title="Comments">
-                      <MessageSquare size={12} />
-                      {issue.comments + (issue.notes?.length || 0)}
-                    </span>
-                    <span title="Attached media">
-                      <Paperclip size={12} />
-                      {issue.media?.length || 0}
-                    </span>
-                    {(issue.run?.phase === 'executing' || issue.run?.phase === 'completed') && (
-                      <GitBranch size={12} aria-label="Branch available" />
-                    )}
-                  </button>
                   <div className="cc-card-actions">
                     <AriaAction issue={issue} onClick={() => onFix(issue.id)} />
                   </div>

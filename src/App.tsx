@@ -32,14 +32,13 @@ import {
 } from 'lucide-react';
 import { AriaAvatar, IssueActionView } from './AriaWorkflow';
 import { initialIssues, statuses } from './data';
-import type { Issue, Priority, Run } from './data';
+import type { Issue, Priority, Run, WorkType } from './data';
 
 import { CreateIssue } from './CreateIssue';
 import { IssueList } from './IssueList';
 import {
   ChildIssues,
   IssueLabels,
-  WorkTypePicker,
   StatusBadge,
   SecondaryBadge,
   useIssueMotion,
@@ -964,7 +963,6 @@ function IssueDetails({
   onTicket: () => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [organizing, setOrganizing] = useState(false);
   const detailMotion = useIssueMotion(issue.id);
   const [title, setTitle] = useState(issue.title);
   const [description, setDescription] = useState(issue.description);
@@ -1031,6 +1029,18 @@ function IssueDetails({
           </button>
         </div>
         <div className="cc-issue-properties cc-header-properties" aria-label="Issue properties">
+          <label>
+            Type
+            <select
+              aria-label="Issue type"
+              value={workTypeOf(issue)}
+              onChange={(e) => onChange(workTypeChanges(issue, e.target.value as WorkType, issues))}
+            >
+              {['Issue', 'Story', 'Epic'].map((type) => (
+                <option key={type}>{type}</option>
+              ))}
+            </select>
+          </label>
           <div className="cc-status-property">
             <span>Status</span>
             <StatusBadge issue={issue} />
@@ -1039,6 +1049,7 @@ function IssueDetails({
           <label>
             Priority
             <select
+              aria-label="Issue priority"
               value={issue.priority}
               onChange={(e) => onChange({ priority: e.target.value as Priority })}
             >
@@ -1059,22 +1070,7 @@ function IssueDetails({
                 {p.title}
               </button>
             ))}
-          <button
-            className="text-button"
-            onClick={() => setOrganizing(!organizing)}
-            aria-expanded={organizing}
-          >
-            Edit properties
-          </button>
         </div>
-        {organizing && (
-          <div className="cc-organize-editor">
-            <WorkTypePicker
-              value={workTypeOf(issue)}
-              onChange={(type) => onChange(workTypeChanges(issue, type, issues))}
-            />
-          </div>
-        )}
       </header>
       <IssueDetailsWorkspace issue={issue} preference={preference} onPreference={onPreference}>
         <div ref={detailMotion} className="cc-issue-page-grid">

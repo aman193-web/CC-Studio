@@ -120,7 +120,7 @@ export function IssueContext({
                   <strong>
                     {issue.run.phase === 'completed'
                       ? issue.run.mode === 'preview'
-                        ? 'Aria completed the demonstration tasks'
+                        ? 'Aria completed the approved tasks'
                         : 'Aria completed the tasks'
                       : issue.run.phase === 'executing'
                         ? 'Aria is working through the approved plan'

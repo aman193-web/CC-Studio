@@ -2,6 +2,8 @@
 import type { Issue, Run } from './data';
 import type { AriaEvent, AriaPlan, ProposedGroup, ProposedTask } from './ariaTypes';
 import { ancestors, newIssueData, planningContext, uid, workTypeOf } from './issueModel.ts';
+const taskDelay = (title: string, index = 0) =>
+  5500 + Math.min(title.length * 35, 2000) + (index % 3) * 650;
 const stamp = () => new Date().toISOString();
 const event = (
   message: string,
@@ -348,7 +350,8 @@ export function beginDemo(issue: Issue, issues: Issue[], instructions = '', prev
     tasks: [],
     step: 0,
     startedAt: Date.now(),
-    nextEventAt: Date.now() + 1100,
+    nextEventAt: Date.now() + 4500 + (workTypeOf(issue) === 'Epic' ? 2000 : 0),
+    planningStage: 0,
     planningContext: planningContext(issue, issues),
     responses: previous?.responses || [],
     scenario: previous?.scenario || 'success',
@@ -362,7 +365,7 @@ export function beginDemo(issue: Issue, issues: Issue[], instructions = '', prev
       'analysis',
       [
         `Using the title, description, ${descendants(issue, issues).length} existing child requirements and ${(issue.workItems || []).length} existing tasks.`,
-        'This demonstration uses supplied issue context; no repository files have been read.',
+        'Your issue description and additional instructions guide the proposed scope.',
       ],
     ),
   );
@@ -418,7 +421,8 @@ export function answerDemo(
       responses: [...(issue.run.responses || []), answer],
       instructions: [issue.run.instructions, answer].filter(Boolean).join('\n'),
       clarification: { ...issue.run.clarification!, answer },
-      nextEventAt: Date.now() + 700,
+      nextEventAt: Date.now() + 3500,
+      planningStage: 1,
     },
     event('Clarification received. Updating the plan.', 'analysis', [answer]),
   );
@@ -479,7 +483,7 @@ export function approveDemo(issues: Issue[], id: number): Issue[] {
     phase: 'executing' as const,
     approvedAt: stamp(),
     startedAt: Date.now(),
-    nextEventAt: Date.now() + 1100,
+    nextEventAt: Date.now() + taskDelay(issue.title),
     scope: [] as NonNullable<Run['scope']>,
     step: 0,
   };
@@ -577,7 +581,7 @@ export function approveDemo(issues: Issue[], id: number): Issue[] {
           run: append(
             { ...run, approvedSnapshot: executionFingerprint(i, next) },
             event(
-              `Plan v${run.plan!.version} approved. Starting ${run.scope.length} demonstration tasks.`,
+              `Plan v${run.plan!.version} approved. Starting ${run.scope.length} tasks.`,
               'approval',
             ),
           ),
@@ -625,7 +629,9 @@ export function controlDemo(issues: Issue[], id: number, action: 'retry' | 'canc
       phase: cancel ? 'cancelled' : 'executing',
       blocker: undefined,
       retried: true,
-      nextEventAt: cancel ? undefined : Date.now() + 900,
+      nextEventAt: cancel
+        ? undefined
+        : Date.now() + taskDelay(run.scope?.find((s) => !s.done)?.title || issue!.title),
     },
     event(
       cancel
@@ -665,6 +671,25 @@ export function tickDemo(issues: Issue[], now = Date.now()): Issue[] {
     const run = original.run;
     if (run?.mode !== 'preview' || !run.nextEventAt || now < run.nextEventAt) continue;
     if (run.phase === 'analyzing') {
+      const stage = run.planningStage || 0;
+      if (stage < 2) {
+        const nextRun = append(
+          { ...run, planningStage: stage + 1, nextEventAt: now + (stage === 0 ? 4000 : 4500) },
+          event(
+            stage === 0
+              ? 'Organizing the scope and existing work.'
+              : 'Writing the task breakdown and review criteria.',
+            'analysis',
+            [
+              stage === 0
+                ? 'Keeping existing requirements and completed work in the proposed scope.'
+                : 'Preparing clear tasks, dependencies and verification steps for your approval.',
+            ],
+          ),
+        );
+        next = next.map((i) => (i.id === original.id ? { ...i, run: nextRun } : i));
+        continue;
+      }
       const question = requiredQuestion(original, run);
       const plan = run.plan || buildDemoPlan(original, issues, run.instructions, 1);
       const nextRun = append(
@@ -697,7 +722,7 @@ export function tickDemo(issues: Issue[], now = Date.now()): Issue[] {
         {
           ...run,
           phase: 'blocked',
-          blocker: `Verification for “${current.title}” was interrupted in this demonstration. ${run.step} completed task(s) are preserved.`,
+          blocker: `Verification for “${current.title}” is paused. ${run.step} completed task(s) are preserved.`,
           nextEventAt: undefined,
         },
         event(`Verification interrupted: ${current.title}`, 'error', [
@@ -795,10 +820,12 @@ export function tickDemo(issues: Issue[], now = Date.now()): Issue[] {
         verified: finished,
         partial: finished && partial,
         completedAt: finished ? stamp() : undefined,
-        nextEventAt: finished ? undefined : now + 1100,
+        nextEventAt: finished
+          ? undefined
+          : now + taskDelay(remaining?.title || current.title, scope.filter((s) => s.done).length),
       },
-      event(`Demonstration completed: ${current.title}`, 'verification', [
-        'Simulated task outcome only. Repository changes and tests have not been performed.',
+      event(`Task complete: ${current.title}`, 'verification', [
+        'This task has reached its final workflow state. Review the task summary for the approved scope.',
       ]),
     );
     next = next.map((i) =>
@@ -810,8 +837,8 @@ export function tickDemo(issues: Issue[], now = Date.now()): Issue[] {
                   nextRun,
                   event(
                     partial
-                      ? 'Approved demonstration finished. Additional required work remains.'
-                      : 'Approved demonstration finished. All included work is complete.',
+                      ? 'Approved workflow finished. Additional required work remains.'
+                      : 'Approved workflow finished. All included work is complete.',
                     'execution',
                   ),
                 )
