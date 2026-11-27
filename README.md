@@ -62,4 +62,13 @@ Repository artifacts are optional typed records. The Code changes section opens 
 
 ### Compare issue layouts
 
-Use the small **Current / Split workspace** toggle in the issue header. Split workspace is the default: issue details and committed tasks occupy the left panel, while Aria proposals and actions occupy the right. Approving a plan creates the task tree on the left without duplicating it on the right. Both layouts share the same session state. On mobile, switch between **Issue & tasks** and **Aria**. The original layout is also preserved on `snapshots/pre-split-workspace-2026-11-27`.
+Use the small **Current / Split workspace** toggle in the issue header. Split workspace is the default: issue details and committed tasks occupy the left panel, while Aria proposals and actions occupy the right. Approving a plan creates the task list on the left; execution progress and active task/subtask details stay in Aria on the right. Both layouts share the same session state. On mobile, switch between **Issue & tasks** and **Aria**. The original layout is also preserved on `snapshots/pre-split-workspace-2026-11-27`.
+
+
+### Quick Aria actions and Auto mode
+
+List and Board actions start planning in place. Buttons progress through Analyzing, Review, Working and Complete. Review opens an Aria sidebar; Expand opens the full issue workspace without resetting the run. Closing the sidebar leaves work running.
+
+Auto mode is off by default and applies to new runs. In this session-only design simulation it records a default clarification choice, validates and approves the plan, runs the tasks, and retries a recoverable blocker once. Stale scope and overlapping work remain blocked; cancelled runs stay stopped. No live AI, repository actions, or production tests are performed. Manual mode retains explicit review and approval. Refresh resets the data and mode.
+
+Priority can be changed directly in the table. The welcome avatar uses subtle idle motion and a hover/focus reaction without hearts, respecting reduced-motion settings.

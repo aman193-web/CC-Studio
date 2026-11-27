@@ -54,6 +54,7 @@ export interface WorkItem {
   subtasks: WorkItem[];
 }
 export interface Run {
+  autoMode?: boolean;
   planningContext?: {
     workType: WorkType;
     title: string;

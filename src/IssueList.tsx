@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Sparkles } from 'lucide-react';
-import type { Issue } from './data';
+import type { Issue, Priority } from './data';
 import { ancestors, association, workTypeOf } from './issueModel';
 import { StatusBadge, useIssueMotion } from './IssueHierarchy';
 import { AriaAction } from './AriaAction';
@@ -14,6 +14,7 @@ export function IssueList({
   onFix,
   onTicket,
   onClear,
+  onPriorityChange,
 }: {
   issues: Issue[];
   page: number;
@@ -24,6 +25,7 @@ export function IssueList({
   onFix: (id: number) => void;
   onTicket: (id: number) => void;
   onClear: () => void;
+  onPriorityChange: (id: number, priority: Priority) => void;
 }) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggle = (key: string) =>
@@ -122,10 +124,21 @@ export function IssueList({
             </span>
           </td>
           <td>
-            <span className={`cc-priority cc-table-priority ${issue.priority.toLowerCase()}`}>
+            <label
+              className={`cc-priority cc-table-priority cc-editable-priority ${issue.priority.toLowerCase()}`}
+            >
               <i aria-hidden="true" />
-              {issue.priority}
-            </span>
+              <select
+                aria-label={`Priority for issue #${issue.id}`}
+                value={issue.priority}
+                onChange={(event) => onPriorityChange(issue.id, event.target.value as Priority)}
+              >
+                {['High', 'Medium', 'Low'].map((priority) => (
+                  <option key={priority}>{priority}</option>
+                ))}
+              </select>
+              <ChevronDown size={12} aria-hidden="true" />
+            </label>
           </td>
           <td>
             <button className="cc-ticket" onClick={() => onTicket(issue.id)}>

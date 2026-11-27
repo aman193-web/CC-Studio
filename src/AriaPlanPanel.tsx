@@ -1,9 +1,9 @@
+import { AutoModeToggle } from './AutoModeToggle';
 import { AriaDisclosure } from './AriaDisclosure';
 import { useState } from 'react';
 import {
   CheckCircle2,
   ChevronDown,
-  ChevronRight,
   CircleHelp,
   LoaderCircle,
   Pencil,
@@ -14,13 +14,15 @@ import {
   Square,
   GitBranch,
 } from 'lucide-react';
-import type { Issue, Run } from './data';
+import type { Issue, Run, WorkItem } from './data';
 import type { AriaPlan, ProposedGroup, ProposedTask } from './ariaTypes';
 import { AriaAvatar } from './AriaWorkflow';
 import { useIssueMotion } from './IssueHierarchy';
 import { planTasks } from './ariaDemo';
 import { workTypeOf } from './issueModel';
 export interface AriaControls {
+  autoMode: boolean;
+  setAutoMode: (enabled: boolean) => void;
   start: (instructions?: string) => void;
   update: (changes: Partial<Run>) => void;
   approve: () => void;
@@ -310,11 +312,13 @@ export function AriaPlanPanel({
   issue,
   controls,
   tasksOnLeft = false,
+  executionWork = [],
   onViewTasks,
 }: {
   issue: Issue;
   controls: AriaControls;
   tasksOnLeft?: boolean;
+  executionWork?: WorkItem[];
   onViewTasks?: () => void;
 }) {
   const run = issue.run,
@@ -340,7 +344,7 @@ export function AriaPlanPanel({
       aria-label="Aria implementation"
     >
       <div className="ap-heading">
-        <AriaAvatar small />
+        <AriaAvatar small playful={phase === 'idle'} />
         <div>
           <span className="ap-eyebrow">YOUR CODING TEAMMATE</span>
           <h2>
@@ -369,11 +373,16 @@ export function AriaPlanPanel({
           </button>
         )}
       </div>
+      {run?.autoMode && phase !== 'idle' && (
+        <p className="cc-auto-run-label">Auto mode · Aria handles planning and execution</p>
+      )}
       {phase === 'idle' && (
         <>
           <p>
-            Aria will review this {workTypeOf(issue).toLowerCase()} and prepare a focused plan. You
-            approve before work starts.
+            Aria will review this {workTypeOf(issue).toLowerCase()} and prepare a focused plan.{' '}
+            {controls.autoMode
+              ? 'Aria will choose an approach and execute automatically.'
+              : 'You approve before work starts.'}
           </p>
           {issue.status === 'Completed' ? (
             <p className="ap-preserved">
@@ -381,6 +390,7 @@ export function AriaPlanPanel({
             </p>
           ) : (
             <>
+              <AutoModeToggle enabled={controls.autoMode} onChange={controls.setAutoMode} />
               <AriaDisclosure className="ap-instructions">
                 <summary>
                   Additional instructions <span>Optional</span>
@@ -398,8 +408,7 @@ export function AriaPlanPanel({
                     className="button primary ap-start"
                     onClick={() => controls.start(instructions)}
                   >
-                    <Sparkles size={16} /> Fix with Aria{' '}
-                    <ChevronRight size={16} className="sw-start-arrow" />
+                    Fix with Aria
                   </button>
                 </div>
               )}
@@ -545,18 +554,61 @@ export function AriaPlanPanel({
             </div>
           )}
           {tasksOnLeft && phase !== 'plan' ? (
-            <div className="sw-transfer-note">
-              <CheckCircle2 size={18} />
-              <div>
-                <strong>Tasks added to your issue</strong>
-                <p>
-                  The approved tasks and subtasks are now on the left. Follow their progress as Aria
-                  works.
-                </p>
-                <button className="text-button" onClick={onViewTasks}>
-                  View issue tasks
-                </button>
-              </div>
+            <div className="sw-execution" aria-label="Task execution progress">
+              {run?.scope?.map((item) => {
+                const task = executionWork.find((work) => work.id === item.workItemId);
+                const active =
+                  running &&
+                  item.workItemId === run.scope?.find((entry) => !entry.done)?.workItemId;
+                const state = item.done
+                  ? 'Complete'
+                  : active
+                    ? 'Working'
+                    : phase === 'blocked' || phase === 'cancelled'
+                      ? 'Paused'
+                      : 'Queued';
+                return (
+                  <AriaDisclosure
+                    key={item.workItemId}
+                    className={`sw-execution-task ${active ? 'is-active' : ''}`}
+                    open={active}
+                  >
+                    <summary>
+                      {item.done ? (
+                        <CheckCircle2 size={16} />
+                      ) : active ? (
+                        <LoaderCircle size={16} className="sw-execution-spinner" />
+                      ) : (
+                        <span className="ap-empty-dot" />
+                      )}
+                      <strong>{item.title}</strong>
+                      <small>{state}</small>
+                      <ChevronDown size={13} />
+                    </summary>
+                    {task?.subtasks.length ? (
+                      <ul>
+                        {task.subtasks.map((subtask) => (
+                          <li key={subtask.id}>
+                            <span>{subtask.title}</span>
+                            <small>
+                              {subtask.status === 'Completed'
+                                ? 'Complete'
+                                : active && subtask.status === 'AI Working'
+                                  ? 'Working'
+                                  : 'Queued'}
+                            </small>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>{task?.description || 'Aria is working through the approved scope.'}</p>
+                    )}
+                  </AriaDisclosure>
+                );
+              })}
+              <button className="text-button" onClick={onViewTasks}>
+                View approved tasks
+              </button>
             </div>
           ) : (
             <div className="ap-hierarchy">

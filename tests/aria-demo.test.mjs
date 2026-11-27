@@ -184,3 +184,46 @@ test('planning and execution wait for paced updates', () => {
     false,
   );
 });
+
+test('auto mode plans, approves and finishes without a manual transition', () => {
+  const issue = make(1, 'Add CSV export');
+  let state = [{ ...issue, run: beginDemo(issue, [issue], '', undefined, true) }];
+  state = settlePlanning(state);
+  assert.equal(state[0].run.phase, 'executing');
+  assert.ok(state[0].workItems.length > 0);
+  assert.ok(state[0].run.events.some((event) => event.message.startsWith('Auto mode approved')));
+  state = finish(state);
+  assert.equal(state[0].status, 'Completed');
+  assert.equal(state[0].run.phase, 'completed');
+});
+
+test('auto mode answers clarification and records its choice', () => {
+  const issue = make(1, 'Fix filters persisting', 'Issue', 'Remember filter preferences.');
+  let state = [{ ...issue, run: beginDemo(issue, [issue], '', undefined, true) }];
+  state = settlePlanning(state);
+  assert.equal(state[0].run.phase, 'executing');
+  assert.ok(state[0].run.responses.includes('This browser'));
+  assert.ok(
+    state[0].run.events.some((event) => event.message === 'Auto mode selected an approach.'),
+  );
+});
+
+test('stopping an auto run does not restart it on the next tick', () => {
+  const issue = make(1, 'Add CSV export');
+  let state = settlePlanning([{ ...issue, run: beginDemo(issue, [issue], '', undefined, true) }]);
+  state = controlDemo(state, 1, 'cancel');
+  state = tickDemo(state, Date.now() + 100000);
+  assert.equal(state[0].run.phase, 'cancelled');
+});
+
+test('auto mode preserves scope validation instead of executing a stale plan', () => {
+  const issue = make(1, 'Add CSV export');
+  let state = ready([issue]);
+  state = [
+    { ...state[0], description: 'Changed requirement', run: { ...state[0].run, autoMode: true } },
+  ];
+  state = tickDemo(state);
+  assert.equal(state[0].run.phase, 'blocked');
+  assert.equal(state[0].run.scopeChanged, true);
+  assert.equal(state[0].workItems?.length || 0, 0);
+});

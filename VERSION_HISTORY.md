@@ -55,3 +55,7 @@ Execution is explicitly demonstrated, with no live Aria/repository backend. Code
 The Current / Split workspace toggle lets reviewers compare both layouts using the same issue data. Split puts issue context and committed tasks on the left, Aria planning and actions on the right. Approval moves tasks and subtasks into the left implementation section; progress remains on the right. The previous version is preserved at `7cfffeb` on `snapshots/pre-split-workspace-2026-11-27`.
 
 - Refined the split option to 60:40, moved description under the title, compacted properties, and centered the larger Aria avatar in a full-width welcome. Added scoped GSAP motion with reduced-motion support; the Current layout remains available.
+
+## In-place Aria actions and optional Auto mode — 27 November 2026
+
+Compacted issue details and filled the Aria pane height. Left-side tasks are a content list; right-side Aria owns execution progress. List and Board Fix with Aria now start in place, with Review opening a right sidebar that expands into the shared issue workspace. Added an opt-in Auto mode for autonomous simulated planning and execution, editable table priorities, and subtle avatar reactions without hearts. Current/Split comparison and frozen versions remain available.

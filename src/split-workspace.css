@@ -834,17 +834,36 @@
   padding: 11px 14px;
   border-radius: 8px;
   font-size: 14px;
-  background: linear-gradient(110deg, #eee5ff, #e9defb);
-  border-color: #d6bef5;
-  box-shadow: 0 4px 10px #b08bd21a;
-  color: #7950b4;
+  justify-content: center;
+  background: #6236dd;
+  border-color: #6236dd;
+  box-shadow: 0 4px 12px #6236dd25;
+  color: #fff;
+  font-weight: 600;
   margin: 0;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 200ms ease;
 }
-.sw-start-arrow {
-  margin-left: auto;
+.sw-ai .ap-idle .sw-start-row .ap-start:hover,
+.sw-ai .ap-idle .sw-start-row .ap-start:focus-visible {
+  background: #542bc8;
+  border-color: #542bc8;
+  box-shadow: 0 7px 20px #6236dd40;
 }
-.sw-ai .ap-idle .sw-start-row .ap-start > svg:first-child {
-  margin-right: auto;
+.sw-ai .ap-idle .sw-start-row .ap-start:focus-visible {
+  outline: 2px solid #aa8af3;
+  outline-offset: 3px;
+}
+.sw-ai .ap-idle .sw-start-row .ap-start:active {
+  background: #4922b8;
+  box-shadow: 0 2px 6px #6236dd30;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw-ai .ap-idle .sw-start-row .ap-start {
+    transition: none;
+  }
 }
 .sw-ai .ap-idle .sw-start-row > span {
   text-align: center;
@@ -939,4 +958,350 @@
   font-size: 10px;
   letter-spacing: 0.7px;
   font-weight: 500;
+}
+
+/* Keep issue context compact and let Aria fill the available pane. */
+.sw-issue-scroll .cc-detail-kicker {
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sw-issue-scroll .cc-detail-kicker .text-button {
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.sw-issue-scroll .cc-description-section {
+  margin-top: 10px;
+}
+.sw-issue-scroll .cc-header-properties {
+  margin-top: 14px;
+  padding-top: 12px;
+}
+.sw-ai .ap-idle {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 0;
+}
+.sw-ai .ap-idle > * {
+  flex-shrink: 0;
+}
+.sw-ai .ap-idle .ap-heading {
+  margin-top: auto;
+}
+.sw-ai .ap-idle > p {
+  margin-bottom: 28px;
+}
+.sw-ai .ap-idle .ap-instructions {
+  margin-top: auto;
+}
+.sw-ai .ap-idle .sw-start-row {
+  flex-shrink: 0;
+}
+
+.cc-header-summary,
+.cc-header-metadata {
+  display: contents;
+}
+/* Issue content first, then one compact properties row. */
+.sw-issue-scroll .cc-integrated-header {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sw-issue-scroll .cc-header-summary {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+.sw-issue-scroll .cc-header-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid #eee7f4;
+}
+.sw-issue-scroll .cc-header-metadata .cc-header-properties {
+  order: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.sw-issue-scroll .cc-header-metadata .cc-detail-byline {
+  order: 1;
+  margin: 0;
+  gap: 7px 10px;
+}
+.sw-issue-scroll .cc-header-summary .cc-organize-line {
+  margin-top: 12px;
+}
+.sw-task-subtasks {
+  padding-left: 18px;
+  margin: 8px 0 0;
+  color: #806a90;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.sw-task-subtasks li + li {
+  margin-top: 6px;
+}
+.sw-task summary > small {
+  margin-left: auto;
+  white-space: nowrap;
+  color: #9a86a8;
+  font-size: 11px;
+}
+.sw-execution {
+  margin: 16px 0;
+}
+.sw-execution-task {
+  border: 1px solid #e9e0f2;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.sw-execution-task.is-active {
+  border-color: #c9afee;
+  background: #faf6ff;
+}
+.sw-execution-task summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px;
+  cursor: pointer;
+  list-style: none;
+  color: #7c5c97;
+}
+.sw-execution-task summary::-webkit-details-marker {
+  display: none;
+}
+.sw-execution-task summary > svg {
+  flex-shrink: 0;
+}
+.sw-execution-task summary strong {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.sw-execution-task small {
+  font-size: 10.5px;
+  white-space: nowrap;
+  color: #967da6;
+}
+.sw-execution-task ul {
+  margin: 0;
+  padding: 0 12px 10px 36px;
+  list-style: none;
+}
+.sw-execution-task li {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 7px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #887295;
+}
+.sw-execution-task p {
+  padding: 0 12px 12px;
+  font-size: 12px;
+}
+.sw-execution-spinner {
+  animation: sw-execution-spin 1.3s linear infinite;
+}
+@keyframes sw-execution-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw-execution-spinner {
+    animation: none;
+  }
+}
+/* Preserve the original comparison layout around the shared header groups. */
+.cc-issue-page:not(.sw-page) .cc-header-summary > h1,
+.cc-issue-page:not(.sw-page) .cc-header-summary > .cc-edit-title-label {
+  grid-column: 1;
+  grid-row: 2;
+}
+.cc-issue-page:not(.sw-page) .cc-header-summary > .cc-organize-line {
+  grid-row: 5;
+}
+
+/* Review a run without losing the issue list or board. */
+.cc-create-drawer.cc-aria-review-drawer {
+  width: min(600px, 100vw);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cc-aria-review-drawer .modal-header {
+  flex-shrink: 0;
+  padding: 20px 22px;
+  gap: 10px;
+}
+.cc-aria-review-drawer .modal-header > div {
+  flex: 1;
+  min-width: 0;
+}
+.cc-aria-review-drawer .modal-header h2 {
+  font-size: 17px;
+}
+.cc-aria-review-drawer .modal-header p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 5px;
+}
+.cc-aria-review-drawer .modal-header .icon-button {
+  flex-shrink: 0;
+}
+.cc-aria-review-content {
+  flex: 1;
+  min-height: 0;
+}
+.cc-fix-button {
+  min-width: 128px;
+}
+@media (max-width: 600px) {
+  .cc-create-drawer.cc-aria-review-drawer {
+    border-radius: 0;
+  }
+  .cc-aria-review-drawer .modal-header {
+    padding: 16px;
+  }
+  .cc-aria-review-content .sw-ai-scroll {
+    padding: 14px;
+  }
+}
+
+.cc-auto-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #897297;
+  white-space: nowrap;
+}
+.cc-auto-mode input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.cc-auto-track {
+  width: 30px;
+  height: 18px;
+  border-radius: 20px;
+  background: #ded5e8;
+  padding: 3px;
+  transition: background 180ms;
+}
+.cc-auto-track i {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px #40275f26;
+  transition: transform 180ms;
+}
+.cc-auto-mode.is-on {
+  color: #7246b4;
+}
+.cc-auto-mode.is-on .cc-auto-track {
+  background: #7346d8;
+}
+.cc-auto-mode.is-on .cc-auto-track i {
+  transform: translateX(12px);
+}
+.cc-auto-mode:has(input:focus-visible) {
+  outline: 2px solid #aa8af3;
+  outline-offset: 5px;
+  border-radius: 4px;
+}
+.ap-idle > .cc-auto-mode {
+  align-self: center;
+  margin: 0 0 14px;
+}
+.cc-auto-run-label {
+  color: #8664a1;
+  font-size: 11px;
+  margin: 10px 0 14px;
+}
+.cc-editable-priority {
+  position: relative;
+  cursor: pointer;
+  gap: 6px;
+}
+.cc-editable-priority select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0 25px 0 28px;
+  font: inherit;
+  border-radius: inherit;
+}
+.cc-editable-priority {
+  min-width: 112px;
+}
+.cc-editable-priority > svg {
+  margin-left: auto;
+}
+.cc-editable-priority:focus-within {
+  outline: 2px solid #b89be2;
+  outline-offset: 2px;
+}
+.cc-editable-priority select:focus {
+  outline: 0;
+  box-shadow: none;
+}
+.cc-editable-priority option {
+  background: white;
+  color: #493954;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-auto-track,
+  .cc-auto-track i {
+    transition: none;
+  }
+}
+
+.aria-avatar.aria-playful {
+  cursor: pointer;
+  position: relative;
+  overflow: visible;
+  outline: none;
+}
+.aria-playful:focus-visible {
+  outline: 2px solid #a580e9;
+  outline-offset: 16px;
+  border-radius: 50%;
+}
+.aria-playful.is-loved::before {
+  border-color: #d0b6f4;
+  box-shadow:
+    0 0 0 12px #e9d5fb55,
+    0 0 35px #c9a5ef66;
+}
+
+.cc-issues-refresh .cc-editable-priority {
+  width: 112px;
+  min-width: 112px;
 }

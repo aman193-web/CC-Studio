@@ -3,26 +3,30 @@ import type { Issue } from './data';
 export function AriaAction({ issue, onClick }: { issue: Issue; onClick: () => void }) {
   const phase = issue.run?.phase;
   const label =
-    issue.status === 'Completed'
-      ? 'View Result'
-      : !phase || phase === 'idle'
-        ? 'Fix with Aria'
-        : phase === 'clarification'
-          ? 'Provide Input'
-          : phase === 'plan'
-            ? 'View Plan'
-            : phase === 'blocked'
-              ? 'View Blocker'
-              : phase === 'cancelled'
-                ? 'Continue Work'
-                : phase === 'completed'
-                  ? 'View Result'
-                  : 'View Progress';
+    phase === 'analyzing'
+      ? 'Analyzing…'
+      : phase === 'executing'
+        ? 'Working…'
+        : ['plan', 'clarification', 'blocked', 'cancelled'].includes(phase || '') ||
+            (phase === 'completed' && issue.run?.partial)
+          ? 'Review'
+          : issue.status === 'Completed' || phase === 'completed'
+            ? 'Complete'
+            : 'Fix with Aria';
   const idle = label === 'Fix with Aria';
   return (
     <button
       className={`cc-fix-button ${idle ? 'aria-invite' : ''} ${phase === 'clarification' || phase === 'blocked' ? 'needs-input' : ''} ${issue.status === 'Completed' ? 'ready' : ''}`}
       onClick={onClick}
+      title={
+        phase === 'clarification'
+          ? 'Aria needs your input'
+          : phase === 'plan'
+            ? 'Review and approve the plan'
+            : phase === 'blocked'
+              ? 'Review the blocker'
+              : undefined
+      }
     >
       {idle ? (
         <img className="cc-button-star" src="/assets/aria-avatar.png" alt="" />
@@ -35,7 +39,9 @@ export function AriaAction({ issue, onClick }: { issue: Issue; onClick: () => vo
       ) : (
         <Sparkles size={14} />
       )}
-      <span>{label}</span>
+      <span aria-live="polite" aria-atomic="true">
+        {label}
+      </span>
     </button>
   );
 }

@@ -340,12 +340,19 @@ export function buildDemoPlan(
     ],
   };
 }
-export function beginDemo(issue: Issue, issues: Issue[], instructions = '', previous?: Run): Run {
+export function beginDemo(
+  issue: Issue,
+  issues: Issue[],
+  instructions = '',
+  previous?: Run,
+  autoMode = previous?.autoMode || false,
+): Run {
   const run: Run = {
     id: uid(),
     planId: uid(),
     phase: 'analyzing',
     mode: 'preview',
+    autoMode,
     instructions,
     tasks: [],
     step: 0,
@@ -581,7 +588,7 @@ export function approveDemo(issues: Issue[], id: number): Issue[] {
           run: append(
             { ...run, approvedSnapshot: executionFingerprint(i, next) },
             event(
-              `Plan v${run.plan!.version} approved. Starting ${run.scope.length} tasks.`,
+              `${run.autoMode ? 'Auto mode approved' : 'Approved'} plan v${run.plan!.version}. Starting ${run.scope.length} tasks.`,
               'approval',
             ),
           ),
@@ -846,6 +853,55 @@ export function tickDemo(issues: Issue[], now = Date.now()): Issue[] {
           }
         : i,
     );
+  }
+  // Auto mode is captured per run; changing the toolbar does not change active runs.
+  for (const item of [...next]) {
+    const current = next.find((issue) => issue.id === item.id)!;
+    const run = current.run;
+    if (!run?.autoMode || run.mode !== 'preview') continue;
+    if (run.phase === 'clarification' && run.clarification) {
+      const answer =
+        run.clarification.options[0] ||
+        `Use the existing behavior and components to deliver: ${current.title}. Keep the scope small.`;
+      const answered = answerDemo(current, answer, next)!;
+      next = next.map((issue) =>
+        issue.id === current.id
+          ? {
+              ...issue,
+              run: append(
+                answered,
+                event('Auto mode selected an approach.', 'analysis', [
+                  run.clarification!.question,
+                  answer,
+                ]),
+              ),
+            }
+          : issue,
+      );
+    } else if (run.phase === 'plan') {
+      const error = approvalError(current, next);
+      if (!error) next = approveDemo(next, current.id);
+      else
+        next = next.map((issue) =>
+          issue.id === current.id
+            ? {
+                ...issue,
+                run: append(
+                  {
+                    ...run,
+                    phase: 'blocked',
+                    blocker: error,
+                    scopeChanged: true,
+                    nextEventAt: undefined,
+                  },
+                  event('Auto mode could not start this plan.', 'error', [error]),
+                ),
+              }
+            : issue,
+        );
+    } else if (run.phase === 'blocked' && !run.scopeChanged && !run.retried) {
+      next = controlDemo(next, current.id, 'retry');
+    }
   }
   return next;
 }

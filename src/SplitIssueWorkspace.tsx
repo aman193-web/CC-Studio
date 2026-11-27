@@ -1,55 +1,32 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { gsap } from 'gsap';
-import {
-  CheckCircle2,
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  ListChecks,
-  Sparkles,
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, ListChecks, Sparkles } from 'lucide-react';
 import type { Issue, WorkItem } from './data';
 import { AriaPlanPanel } from './AriaPlanPanel';
 import type { AriaControls } from './AriaPlanPanel';
 import { ActivityPanel } from './IssueDetailsWorkspace';
 import { AriaDisclosure } from './AriaDisclosure';
 import { IssueContext } from './IssueContext';
-import { StatusBadge } from './IssueHierarchy';
 import { ancestors, workTypeOf } from './issueModel';
 
 function CommittedTask({ task }: { task: WorkItem }) {
   return (
-    <AriaDisclosure className={`sw-task ${task.status === 'Completed' ? 'is-complete' : ''}`}>
+    <AriaDisclosure className="sw-task">
       <summary>
         <ChevronDown size={14} />
-        <span className="sw-task-name">
-          {task.title}
-          <small>
-            {task.subtasks.length
-              ? `${task.subtasks.filter((s) => s.status === 'Completed').length}/${task.subtasks.length} subtasks complete`
-              : 'Implementation task'}
-          </small>
-        </span>
-        <StatusBadge issue={task} />
+        <span className="sw-task-name">{task.title}</span>
+        <small>{task.subtasks.length ? `${task.subtasks.length} subtasks` : 'Task'}</small>
       </summary>
       <div className="sw-task-body">
         {task.description && <p>{task.description}</p>}
-        {task.subtasks.map((subtask) => (
-          <div className="sw-subtask" key={subtask.id}>
-            <span className={subtask.status === 'Completed' ? 'done' : ''}>
-              {subtask.status === 'Completed' ? <CheckCircle2 size={14} /> : <i />}
-            </span>
-            <span>{subtask.title}</span>
-            <small>
-              {subtask.status === 'AI Working'
-                ? 'Working'
-                : subtask.status === 'Completed'
-                  ? 'Done'
-                  : 'To do'}
-            </small>
-          </div>
-        ))}
+        {task.subtasks.length > 0 && (
+          <ul className="sw-task-subtasks">
+            {task.subtasks.map((subtask) => (
+              <li key={subtask.id}>{subtask.title}</li>
+            ))}
+          </ul>
+        )}
       </div>
     </AriaDisclosure>
   );
@@ -77,7 +54,6 @@ export function SplitIssueWorkspace({
   );
   const groups = [issue, ...descendants].filter((item) => item.workItems?.length);
   const work = groups.flatMap((item) => item.workItems || []);
-  const completed = work.filter((item) => item.status === 'Completed').length;
   const taskMotion = useRef<HTMLDivElement>(null);
   const workspace = useRef<HTMLDivElement>(null);
   const workKey = work.map((item) => item.id).join(',');
@@ -198,11 +174,6 @@ export function SplitIssueWorkspace({
         </button>
       </div>
       <section className="sw-issue" aria-label="Issue and approved tasks">
-        <div className="sw-panel-heading">
-          <span>
-            <FileText size={14} /> Issue details
-          </span>
-        </div>
         <div className="sw-issue-scroll">
           {header}
           <div className="sw-issue-content">
@@ -211,15 +182,10 @@ export function SplitIssueWorkspace({
                 <h2>
                   <ListChecks size={17} /> Implementation tasks
                 </h2>
-                <span>{work.length ? `${completed}/${work.length} complete` : 'No tasks yet'}</span>
+                <span>{work.length ? `${work.length} tasks` : 'No tasks yet'}</span>
               </div>
               {work.length ? (
                 <div ref={taskMotion}>
-                  <progress
-                    aria-label="Issue task completion"
-                    value={completed}
-                    max={work.length}
-                  />
                   {groups.map((group) => (
                     <div className="sw-task-group" key={group.id}>
                       {group.id !== issue.id && (
@@ -264,24 +230,14 @@ export function SplitIssueWorkspace({
         </div>
       </section>
       <aside className="sw-ai" aria-label="Aria planning and execution">
-        <div className="sw-panel-heading">
-          <span>
-            <Sparkles size={15} /> Aria workspace
-          </span>
-          <small>
-            {phase === 'executing'
-              ? 'Working'
-              : phase === 'plan'
-                ? 'Plan ready'
-                : phase === 'clarification'
-                  ? 'Needs input'
-                  : phase === 'completed'
-                    ? 'Complete'
-                    : 'Ready to help'}
-          </small>
-        </div>
         <div className="sw-ai-scroll">
-          <AriaPlanPanel issue={issue} controls={controls} tasksOnLeft onViewTasks={viewTasks} />
+          <AriaPlanPanel
+            issue={issue}
+            controls={controls}
+            tasksOnLeft
+            executionWork={work}
+            onViewTasks={viewTasks}
+          />
           {issue.run && (
             <AriaDisclosure className="sw-activity" open>
               <summary>
