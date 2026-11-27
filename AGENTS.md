@@ -15,3 +15,43 @@
 - Aria workflow now stays inline within issue details, directly below “Let Aria take it from here”; no separate Aria route navigation. Board/list Aria actions open the detail page and scroll to this section. Keep headings, subheadings, and line spacing compact.
 
 - The Issues tab (including issue details and Aria) uses the full workspace width with the left chat panel and its toggle hidden. Other tabs retain their previous assistant-panel preference.
+
+## Batch 1 decisions (supersede conflicting v2 notes above)
+- Work on `design/next-two-batches`; preserve `main`, `snapshots/current-2026-11-27`, and all v1 files.
+- Unified issues support multi-label Epic/Story/Task/etc.; Epic and Story are mutually exclusive. `parentIssueId` is authoritative, with derived ancestor associations and validation in `issueModel.ts`.
+- Primary statuses are exactly To Do, AI Working, Completed. Do not restore manual status moves or drag-to-execute. Planning, clarification and approval are secondary indicators. Preview execution is not production execution.
+- Preserve issue/task assignment information; Batch 1 explicitly requests assignment fields, superseding the earlier Aria-only UI restriction.
+- Keep independent `workItems` separate from draft `run.tasks`; reconcile stable IDs on approval and never duplicate child issues into tasks. Preserve completed work and history.
+- State key is `cc-studio-issues-batch1`; migrate v2 safely without overwriting its original storage. Fresh sample hierarchy must never replace the user's existing data.
+- Label-aware generation and the two-panel Aria execution experience belong to Batch 2. Run/event/artifact references are only a foundation in Batch 1.
+- Run `npm run check`, `npm test`, and `npm run build`. Node 22.18+ supports the model tests. Use isolated browser contexts for destructive QA changes.
+
+- Latest simplification: show one Issue / Story / Epic work-type control in creation and property editing, with no multi-label checklist or parent dropdowns. Preserve existing label metadata and hierarchy validation. New Aria runs capture planning context; full generation remains Batch 2. Table column is Label, not Created in; retain source on the detail page.
+
+The issue table now shows Type (Issue / Story / Epic) derived from work type, rather than legacy labels. Existing labels remain stored.
+
+Latest UI refinement: table has a dedicated Priority column with compact tinted High/Medium/Low pills; Awaiting verification is hidden in table rows. Toolbar is search plus Type, with status tabs; source, Epic, Story, label, and grouping controls are removed. Detail status badges have rounded corners and balanced padding. Issue data now lives in React state and resets to initial examples on browser reload, per user request; old stored issue data is left untouched and is no longer loaded or written. This supersedes earlier persistence and filter descriptions.
+
+- Aria is the sole executor: remove all assignee controls and assignment text from issue creation, details, and tasks. This supersedes the Batch 1 assignment UI rule. Retain legacy assignment data internally for compatibility.
+
+## Batch 2 (supersedes earlier conflicting implementation notes)
+- Keep Issue / Story / Epic as the only visible work classifications everywhere. Preserve legacy metadata internally.
+- Planning, clarification, approval, progress and results live in Issue Details. No stepper or separate execution page.
+- `ariaDemo.ts` is a clearly labeled, isolated demonstration adapter. Do not imply live AI, repository inspection, tests or commits. Production events must remain separate.
+- Draft work is created only on approval. Preserve IDs and completed work, reject stale/overlapping approvals, and retain excluded scope for continuation.
+- The 60:40 workspace has a resizable, collapsible, read-only activity panel, independent scrolling, mobile tabs and session-only preferences. Never add a chat composer.
+- Browser refresh resets all prototype state; do not restore persistent browser storage.
+- Pre-Batch-2 refinement is preserved at `c89c750` on `snapshots/pre-batch2-2026-11-27`. Work continues on `design/next-two-batches`.
+
+- Issue Details keeps its title, metadata and properties in a full-width header above the two-panel workspace. The idle Aria card uses a compact introduction with its action aligned right and expandable instructions below.
+
+- Latest UI refinement: remove prototype/demo notices and scenario controls from product screens. The implementation remains a session-only simulation; preserve that boundary in documentation and do not invent repository artifacts. Planning uses paced scope/writing updates (about 13–15 seconds), tasks take about 6–9 seconds. Awaiting approval is a hover/focus hint, and approval actions stay visible while plans scroll.
+
+- Layout comparison: retain the current inline layout and add a small Current / Split workspace toggle in Issue Details. Split is the default, with title/metadata/description and committed work on the left, and Aria proposals/actions/activity on the right. Only approval materializes draft tasks; after approval do not repeat the task tree in Aria. Use mobile Issue & tasks / Aria tabs. Layout selection is session-only and shared across issue navigation. The pre-split layout is preserved at 7cfffeb on snapshots/pre-split-workspace-2026-11-27.
+
+- Split layout refinement: use a 60:40 issue/Aria ratio on desktop. Place the description immediately below the title, above compact inline metadata. The idle Aria welcome spans its pane with a centered 88px avatar and full-width action. GSAP handles entry, avatar float, action feedback and committed-task entry, with cleanup and reduced-motion support. Keep Current layout separate.
+
+- Latest split workflow: left pane shows approved task/subtask content only; execution indicators and progress stay in the right Aria pane. Issue properties use compact rows below the description. List/Board Fix with Aria starts analysis in place; button shows Analyzing / Review / Working / Complete. Review opens a right Aria drawer with the shared live run and an expand-to-issue action. Closing the drawer never cancels the run. Manual mode still requires approval before execution.
+
+- Auto mode is an opt-in, session-only toggle for new runs. The run captures its mode; automatic runs choose clarification defaults, record the choice, validate and approve the plan, execute, and retry a recoverable blocker once. Manual runs retain review/approval. Stop remains effective; never auto-restart cancelled runs or bypass stale-scope/conflict validation. This is still a design simulation with no live AI/repository execution.
+- Table priority pills are native editable selects. The welcome avatar floats subtly while idle and reacts to hover/focus with a wiggle and bounce, without hearts; reduced-motion users get static feedback.

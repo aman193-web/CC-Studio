@@ -1,0 +1,283 @@
+/* Shared visual rhythm for Issues; the original portal shell stays unchanged. */
+.cc-issues-refresh,
+.cc-issue-page,
+.cc-create-drawer {
+  --issue-text-small: 12px;
+  --issue-text-body: 13px;
+  --issue-radius: 6px;
+}
+.cc-issues-refresh .cc-issue-table th,
+.cc-issues-refresh .cc-filtered-count,
+.cc-issues-refresh .cc-pagination,
+.cc-issues-refresh .cc-repo-status,
+.cc-issues-refresh .cc-issue-search input,
+.cc-issues-refresh .cc-issue-toolbar > select,
+.cc-issues-refresh .cc-view-toggle button,
+.cc-issues-refresh .cc-issue-status-tabs button {
+  font-size: 12px;
+}
+.cc-issues-refresh .cc-issue-search,
+.cc-issues-refresh .cc-issue-toolbar > select,
+.cc-issues-refresh .cc-view-toggle {
+  height: 36px;
+  box-sizing: border-box;
+}
+.cc-issues-refresh .cc-issue-table th,
+.cc-issues-refresh .cc-issue-table td {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+.cc-issues-refresh .cc-issue-table th:first-child,
+.cc-issues-refresh .cc-issue-table td:first-child {
+  padding-left: 22px;
+}
+.cc-issues-refresh .cc-issue-title {
+  line-height: 1.45;
+  text-align: left;
+}
+.cc-issue-table .cc-list-parent {
+  padding-left: 0;
+  font-size: 12px;
+  text-align: left;
+}
+.cc-list-title-row .cc-issue-title small {
+  font-size: 12px;
+}
+.cc-issues-refresh .cc-status,
+.cc-issue-page .cc-status,
+.cc-issues-refresh .cc-type,
+.cc-issue-page .cc-type {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  box-sizing: border-box;
+  border-radius: var(--issue-radius, 6px);
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 18px;
+  gap: 5px;
+}
+.cc-issues-refresh .cc-status svg,
+.cc-issue-page .cc-status svg {
+  flex-shrink: 0;
+}
+.cc-issues-refresh .cc-secondary-state {
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+.cc-issues-refresh .cc-board-card {
+  padding: 14px;
+}
+.cc-issues-refresh .cc-card-top {
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+.cc-issues-refresh .cc-card-title {
+  line-height: 1.4;
+  margin: 0;
+}
+.cc-issues-refresh .cc-card-description {
+  margin: 6px 0 8px;
+  line-height: 1.5;
+}
+.cc-issues-refresh .cc-card-parent {
+  font-size: 12px;
+  line-height: 1.4;
+  padding-left: 0;
+  text-align: left;
+}
+.cc-issues-refresh .cc-card-state {
+  margin-top: 8px;
+}
+.cc-issues-refresh .cc-card-origin {
+  margin-top: 10px;
+  align-items: center;
+}
+.cc-issues-refresh .cc-card-origin > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 12px;
+}
+.cc-issues-refresh .cc-card-origin b {
+  font-weight: 500;
+}
+.cc-issues-refresh .cc-card-context {
+  font-size: 12px;
+  line-height: 1.4;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.cc-issues-refresh .cc-card-actions {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.cc-issue-page .cc-detail-navigation {
+  gap: 16px;
+}
+.cc-issue-page .cc-detail-navigation > span {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.cc-issue-page .cc-detail-byline,
+.cc-issue-page .cc-organize-line {
+  font-size: 12.5px;
+  line-height: 1.5;
+  gap: 8px 12px;
+}
+.cc-issue-page .cc-header-properties {
+  align-items: flex-start;
+}
+.cc-issue-page .cc-header-properties label,
+.cc-issue-page .cc-status-property {
+  font-size: 12px;
+  line-height: 18px;
+}
+.cc-issue-page .cc-header-properties select,
+.cc-issue-page .cc-status-property .cc-status {
+  height: 36px;
+  min-height: 36px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+.cc-issue-page .cc-section-heading {
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.cc-issue-page .cc-inline-actions {
+  gap: 12px;
+}
+.cc-issue-page .cc-small-empty {
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 10px 0;
+}
+.cc-issue-page .cc-child-heading > span,
+.cc-issue-page .cc-work-title small {
+  font-size: 12px;
+}
+.cc-issue-page .cc-child-issues,
+.cc-issue-page .cc-issue-context {
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.cc-issue-page .cc-page-aria {
+  margin-top: 16px;
+}
+.cc-issue-page .aria-steps {
+  padding: 12px 16px;
+  gap: 12px;
+  align-items: center;
+}
+.cc-issue-page .aria-steps > div {
+  font-size: 12px;
+  line-height: 18px;
+  gap: 6px;
+}
+.cc-issue-page .context-card p {
+  font-size: 13px;
+}
+.cc-create-drawer .modal-header,
+.cc-create-drawer .modal-body,
+.cc-create-drawer .modal-footer.cc-create-actions {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+.cc-create-drawer .form-stack {
+  gap: 18px;
+}
+.cc-create-drawer .form-stack > label,
+.cc-create-drawer .cc-form-pair > label,
+.cc-create-drawer .cc-work-type-picker legend {
+  font-size: 13px;
+  line-height: 18px;
+}
+.cc-create-drawer .optional {
+  font-size: 12px;
+}
+.cc-create-drawer .cc-create-actions .button {
+  min-height: 38px;
+  font-size: 13px;
+  line-height: 18px;
+  padding: 9px 12px;
+}
+.cc-create-drawer .cc-work-type-picker input[type='radio'] {
+  width: 13px;
+  height: 13px;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+}
+@media (max-width: 650px) {
+  .cc-issues-refresh .cc-issue-table td,
+  .cc-issues-refresh .cc-issue-table td:first-child {
+    padding: 0;
+  }
+  .cc-issues-refresh .cc-issue-toolbar {
+    gap: 8px;
+  }
+  .cc-issues-refresh .cc-filtered-count {
+    margin-left: auto;
+  }
+  .cc-issue-page .cc-section-heading {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cc-issue-page .cc-child-heading {
+    flex-wrap: wrap;
+  }
+  .cc-issue-page .cc-detail-navigation {
+    align-items: flex-start;
+  }
+  .cc-issue-page .aria-steps {
+    gap: 6px;
+    padding: 10px;
+    overflow-x: auto;
+  }
+  .cc-create-drawer .modal-header,
+  .cc-create-drawer .modal-body,
+  .cc-create-drawer .modal-footer.cc-create-actions {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .cc-create-drawer .cc-create-actions .button {
+    flex: 1;
+    padding: 9px 8px;
+  }
+}
+.cc-issue-page .cc-header-properties > label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cc-issue-page .cc-small-empty {
+  padding: 0;
+}
+.cc-issues-refresh .cc-card-origin > span b {
+  display: inline;
+  margin: 0;
+}
+.cc-issues-refresh .cc-card-origin > span {
+  flex-direction: row;
+}
+@media (max-width: 650px) {
+  .cc-issue-page .cc-child-issues .cc-section-heading {
+    align-items: flex-start;
+  }
+  .cc-issue-page .cc-child-issues .cc-child-heading {
+    flex: 1 1 100%;
+  }
+  .cc-issue-page .cc-child-issues .cc-inline-actions {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    width: 100%;
+    gap: 16px;
+  }
+}

@@ -1,50 +1,74 @@
-# CC Studio — Issues design prototype
+# CC Studio — Aria Issues workspace
 
-The active portal follows the supplied SVG design and opens on **Features**. The **Issues** tab retains the interactive issue-management and Aria prototype.
-
-- [Current design](http://127.0.0.1:5173/)
-- [Preserved first design](http://127.0.0.1:5173/v1/index.html)
-- [Version history and project memory](VERSION_HISTORY.md)
+React, TypeScript, Vite and GSAP design prototype. The original CC Studio shell, Roboto typography, lavender palette and frozen V1 are preserved.
 
 ## Run
 
 ```sh
 npm install
 npm run dev
+npm run check
+npm test
+npm run build
 ```
 
-`npm run check` checks TypeScript and unused declarations. `npm run build` creates the production bundle, including the frozen first-version preview.
+Use Node 22.18+ or Node 24 for the TypeScript model tests. Deploy the repository root as Vite (`npm run build`, output `dist`).
 
-## Included
+## Current interface
 
-List and Kanban board views with shared status tabs, search, creation-source filtering, list pagination, inline status access, and issue creation/editing. Board cards move between statuses by drag-and-drop or a keyboard-accessible dropdown. The List / Board preference persists locally. Issue details have dedicated routes (`/#issues/42`) with a back button and browser-history support. New issues are created in a right sidebar that opens the resulting detail page after submission. The existing star mascot sits at the right of the status tabs, with gentle animation and reduced-motion support. The welcome banner has been removed and the header compacted. Every issue identifies **CC Studio** or **GitLab** as its origin and exposes a GitLab ticket link.
+- Unified Issue / Story / Epic classification across list, board, details, creation and plans. Legacy labels remain in the data for compatibility, but are not shown as work classifications.
+- Table columns: Issue, Status, Type, Priority, GitLab ticket, Aria. Search, Type and status are the only filters.
+- Three primary statuses: To Do, AI Working and Completed. Planning and approval do not start execution.
+- Aria is the only executor; no assignment controls.
+- New work uses the existing right-side creation drawer. Issue details remain inside the full-width Issues tab.
+- Issue details have resizable 60:40 panels: implementation on the left and read-only activity on the right. The right panel begins collapsed, opens on planning, respects an explicit collapse preference, and retains history. A keyboard-accessible divider supports arrow-key resizing. Mobile uses two tabs.
+- All issue, task, plan, run, clarification, activity and panel-preference data is session-only React state. Internal navigation preserves it; browser refresh resets to initial examples. No browser persistence is read or written by the active app.
 
-GitLab is shown as already connected. There is no provider selection, authorization, or reconnection flow. Ticket links open a clearly labeled design preview with a placeholder project path; the user explicitly requested design only.
+## Planning and execution
 
-**Fix with Aria** opens a focused workflow: optional instructions, simulated analysis, clarification, task/subtask review, assignment, approval, progress, and completion. State is saved locally with a separate storage key from version 1.
+`Fix with Aria` begins planning immediately. The five-step wizard has been removed. Users can review expandable task hierarchies, edit proposed work, include/exclude scope with prerequisites, provide clarification, request a new plan version, and approve execution.
 
-The original shell controls are retained visually. Features follows the supplied SVG layout with the existing Roboto font family; unrelated existing controls are outside this prototype's implementation scope. No real issues, repository changes, credentials, or deployments are created.
+Issue plans use focused tasks; Story plans provide broader tasks and subtasks; Epic plans reuse child requirements and can propose new Stories. New work is materialized only on approval using the same Issue model and permanent WorkItems. Stable IDs preserve existing work. Partial approvals retain excluded scope for continuation. Approval is tied to the requirement snapshot, and overlapping execution is rejected. Changing stopped work requires new approval before resuming.
 
-## Files
+The activity feed groups details behind disclosures and retains separate attempts. It follows new activity only when near the bottom, otherwise showing Jump to latest. No chat or composer exists in that panel.
 
-- `src/App.tsx`: retained shell, simplified Issues view, issue editor, ticket preview.
-- `src/IssueBoard.tsx`: Kanban cards, status movement, and shared Aria buttons.
-- `src/issues.css`: scoped Issues visual refresh and reduced-motion-aware animations.
-- `src/AriaWorkflow.tsx`: task-focused Aria workflow and accessible dialogs.
-- `src/data.ts`: sample issues and deterministic task plans.
-- `src/styles.css`: reference shell and Issues styles.
-- `src/workflow.css`: retained workflow styles.
-- `versions/v1/`: source snapshot of the first design.
-- `public/v1/`: frozen first design, served separately.
+## Demonstration boundary
 
-The generated Aria avatar is reused from version 1 at `public/assets/aria-avatar.png`. Its original generation prompt and provenance are preserved in `versions/v1/README.md`.
+There is no Aria service or repository execution integration in this codebase. `src/ariaDemo.ts` is an isolated deterministic demonstration adapter, not an LLM or production executor. It uses issue text, work type and existing work to produce example plans. It cannot inspect a remote repository, infer real project architecture, run shell commands, modify code, execute tests, or create commits/MRs. Arbitrary natural-language plan revisions require future backend integration; the demo supports targeted instructions such as verification-only scope plus editable draft tasks.
 
-## Verification
+All new runs carry `mode: 'preview'` and visible Demo run identification. Timed outcomes belong exclusively to the demo adapter. Completion denotes a simulated result, not real verified code. The collapsed Demonstration behavior control can exercise a verification blocker; Retry preserves completed work, and Stop retains the approved scope. Real execution must consume actual backend events rather than these demo ticks.
 
-TypeScript and production build pass. Browser checks verified the existing connected state, creation-source filtering, status filtering, pagination, sample GitLab ticket previews, new-issue origin, Aria planning/approval/completion, reload persistence, mobile viewport and dialog bounds, and the frozen first-version preview with its assets. No console errors were observed. Test-created issues were removed.
+Repository artifacts are optional typed records. The Code changes section opens supplied HTTPS artifacts; it never constructs branch names, commit SHAs, merge requests, test results or file counts. The inherited connected GitLab presentation remains; missing ticket URLs show an honest unavailable state.
 
-Latest verification: List / Board switching, persisted view preference, drag and dropdown status changes, shared filtering, ticket previews, Aria entry points, keyboard focus, reduced-motion behavior, and 1920 / 1024 / 390 px layouts passed. Test status changes were restored. Open `/#issues` to preview Issues directly.
+## Important files
 
-Navigation refresh verification: dedicated detail routes/reload, browser Back and Forward, preserved search/view on return, inline editing, retained detail context after GitLab/Aria overlays, drawer validation and creation, keyboard focus, and mobile page/drawer bounds. Test issues and edits were restored after checks.
+- `src/ariaTypes.ts`: plans, groups, tasks, execution references, activity and workspace preference types.
+- `src/ariaDemo.ts`: demo planning, exact approval, reconciliation, execution events, blockers, partial completion and retries.
+- `src/AriaPlanPanel.tsx`: inline clarification, editable plan hierarchy, approvals, progress and results.
+- `src/IssueDetailsWorkspace.tsx`: resizable workspace, independent scrolling and read-only activity.
+- `src/AriaDisclosure.tsx`: native accessible disclosures with GSAP motion.
+- `src/aria-workspace.css`: compact two-panel layout and responsive design.
+- `src/issueModel.ts`: hierarchy, classification, legacy normalization and preservation.
+- `src/WorkItems.tsx`, `src/IssueContext.tsx`: independent work, comments, attachments and history.
+- `tests/aria-demo.test.mjs`, `tests/issue-model.test.mjs`: lifecycle, approval, dependencies, preservation and hierarchy checks.
 
-Aria and ticket actions render as in-tab pages, retaining the Studio shell, rather than dialogs or whole-portal pages. Verified analysis → approval → execution → completion, clarification, browser Back, desktop/mobile bounds, and the avatar’s status-row placement.
+## Preserved versions
+
+- Current dev: http://127.0.0.1:5173/#issues
+- Frozen V1: `versions/v1/`, `/v1/index.html` (unchanged).
+- Original snapshot: `snapshots/current-2026-11-27` at `53fbdcc`.
+- Refined pre-Batch-2 snapshot: `snapshots/pre-batch2-2026-11-27` at `c89c750`.
+- Active branch: `design/next-two-batches`.
+
+### Compare issue layouts
+
+Use the small **Current / Split workspace** toggle in the issue header. Split workspace is the default: issue details and committed tasks occupy the left panel, while Aria proposals and actions occupy the right. Approving a plan creates the task list on the left; execution progress and active task/subtask details stay in Aria on the right. Both layouts share the same session state. On mobile, switch between **Issue & tasks** and **Aria**. The original layout is also preserved on `snapshots/pre-split-workspace-2026-11-27`.
+
+
+### Quick Aria actions and Auto mode
+
+List and Board actions start planning in place. Buttons progress through Analyzing, Review, Working and Complete. Review opens an Aria sidebar; Expand opens the full issue workspace without resetting the run. Closing the sidebar leaves work running.
+
+Auto mode is off by default and applies to new runs. In this session-only design simulation it records a default clarification choice, validates and approves the plan, runs the tasks, and retries a recoverable blocker once. Stale scope and overlapping work remain blocked; cancelled runs stay stopped. No live AI, repository actions, or production tests are performed. Manual mode retains explicit review and approval. Refresh resets the data and mode.
+
+Priority can be changed directly in the table. The welcome avatar uses subtle idle motion and a hover/focus reaction without hearts, respecting reduced-motion settings.

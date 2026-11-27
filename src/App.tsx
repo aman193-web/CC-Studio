@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
 import { gsap } from 'gsap';
-import { AriaAction, IssueBoard } from './IssueBoard';
+import { IssueBoard } from './IssueBoard';
+import { AutoModeToggle } from './AutoModeToggle';
+import { AriaReviewDrawer } from './AriaReviewDrawer';
 import { IssueContext, IssueBranch } from './IssueContext';
 import {
   ArrowRight,
@@ -9,10 +10,7 @@ import {
   Pencil,
   CheckCircle2,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
-  Circle,
-  CircleDashed,
   Clock3,
   Cloud,
   Database,
@@ -31,43 +29,85 @@ import {
   Rocket,
   Search,
   Settings,
-  Sparkles,
   UserCircle,
   X,
 } from 'lucide-react';
-import { AriaAvatar, AriaWorkspace, IssueActionView, Modal } from './AriaWorkflow';
-import { initialIssues, phaseLabels, statuses, taskPlan } from './data';
-import type { Issue, Phase, Priority, Run, Status } from './data';
+import { AriaAvatar, IssueActionView } from './AriaWorkflow';
+import { initialIssues, statuses } from './data';
+import type { Issue, Priority, Run, WorkType } from './data';
 
-const STORAGE = 'cc-studio-issues-v2';
-const seed = () =>
-  initialIssues.map((i) => ({
+import { CreateIssue } from './CreateIssue';
+import { IssueList } from './IssueList';
+import {
+  ChildIssues,
+  IssueLabels,
+  StatusBadge,
+  SecondaryBadge,
+  useIssueMotion,
+} from './IssueHierarchy';
+import {
+  ancestors,
+  hasLabel,
+  migrateIssues,
+  workTypeOf,
+  workTypeChanges,
+  newIssueData,
+  searchIssue,
+  validateIssue,
+} from './issueModel';
+import { AriaPlanPanel } from './AriaPlanPanel';
+import type { AriaControls } from './AriaPlanPanel';
+import { IssueDetailsWorkspace } from './IssueDetailsWorkspace';
+import { SplitIssueWorkspace } from './SplitIssueWorkspace';
+import type { WorkspacePreference } from './ariaTypes';
+import {
+  beginDemo,
+  tickDemo,
+  approveDemo,
+  approvalError,
+  answerDemo,
+  controlDemo,
+} from './ariaDemo';
+const seed = () => {
+  const base = initialIssues.map((i) => ({
     ...i,
     source: i.source === 'Studio' ? ('Studio' as const) : ('GitLab' as const),
   }));
-function loadIssues(): Issue[] {
-  try {
-    const value = JSON.parse(localStorage.getItem(STORAGE) || 'null');
-    return Array.isArray(value) &&
-      value.every((i) => typeof i.id === 'number' && typeof i.title === 'string')
-      ? value
-      : seed();
-  } catch {
-    return seed();
-  }
-}
+  const epic = {
+    ...newIssueData(50, 'Analytics and reporting', ['Epic']),
+    description: 'Make dashboard data easier to explore, understand, and export.',
+  };
+  const story = {
+    ...newIssueData(51, 'Explore dashboard analytics', ['Story']),
+    description: 'As a workspace member, I can filter, sort, and export analytics.',
+    parentIssueId: 50,
+  };
+  const auth = {
+    ...newIssueData(52, 'User authentication', ['Epic']),
+    description: 'Provide a reliable and accessible sign-in experience.',
+  };
+  const login = {
+    ...newIssueData(53, 'Reliable sign-in and recovery', ['Story']),
+    description: 'Help users return to their work after signing in.',
+    parentIssueId: 52,
+  };
+  return migrateIssues([
+    ...base.map((i) => ({
+      ...i,
+      parentIssueId: [42, 38, 36, 33, 31].includes(i.id) ? 51 : [41, 34].includes(i.id) ? 53 : null,
+    })),
+    epic,
+    story,
+    auth,
+    login,
+  ]).map((issue) => ({
+    ...issue,
+    run: undefined,
+    runHistory: issue.run ? [...(issue.runHistory || []), issue.run] : issue.runHistory,
+    legacyStatus: undefined,
+  }));
+};
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
-function StatusMark({ status }: { status: Status }) {
-  return status === 'Done' ? (
-    <CheckCircle2 size={14} />
-  ) : status === 'In review' ? (
-    <CircleDashed size={14} />
-  ) : status === 'In progress' ? (
-    <span className="cc-progress-dot" />
-  ) : (
-    <Circle size={14} />
-  );
-}
 function Source({ source }: { source: Issue['source'] }) {
   return (
     <span className={cx('cc-source', source === 'Studio' && 'studio')}>
@@ -103,6 +143,7 @@ export default function App() {
   useEffect(() => {
     const onHashChange = () => {
       if (window.location.hash === '#cc-workspace') return;
+      setAriaDrawerId(null);
       setTab(window.location.hash.startsWith('#issues') ? 'Issues' : 'Features');
       const match = window.location.hash.match(/^#issues\/(\d+)(?:\/aria)?$/);
       const action = window.location.hash.match(/^#issues\/(\d+)\/(aria|ticket)$/);
@@ -120,22 +161,22 @@ export default function App() {
       window.removeEventListener('popstate', onHashChange);
     };
   }, []);
-  const [issues, setIssues] = useState<Issue[]>(loadIssues);
-  const [issueView, setIssueView] = useState<'list' | 'board'>(() => {
-    try {
-      return localStorage.getItem('cc-studio-issue-view') === 'board' ? 'board' : 'list';
-    } catch {
-      return 'list';
-    }
-  });
+  const [issues, setIssues] = useState<Issue[]>(seed);
+  const [autoMode, setAutoMode] = useState(false);
+  const [detailLayout, setDetailLayout] = useState<'current' | 'split'>('split');
+  const [workspacePreferences, setWorkspacePreferences] = useState<
+    Record<number, WorkspacePreference>
+  >({});
+  const preferenceFor = (id: number): WorkspacePreference =>
+    workspacePreferences[id] || { collapsed: true, explicit: false, ratio: 60 };
+  const revealActivity = (id: number) =>
+    setWorkspacePreferences((prev) => {
+      const p = prev[id] || { collapsed: true, explicit: false, ratio: 60 };
+      return p.explicit ? prev : { ...prev, [id]: { ...p, collapsed: false } };
+    });
+
+  const [issueView, setIssueView] = useState<'list' | 'board'>('list');
   const issuesRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    try {
-      localStorage.setItem('cc-studio-issue-view', issueView);
-    } catch {
-      /* View remains available for the session. */
-    }
-  }, [issueView]);
   useLayoutEffect(() => {
     if (tab !== 'Issues' || !issuesRef.current) return;
     const mm = gsap.matchMedia();
@@ -158,10 +199,16 @@ export default function App() {
     return () => mm.revert();
   }, [tab, issueView]);
   const [status, setStatus] = useState('All');
-  const [source, setSource] = useState('All sources');
   const [query, setQuery] = useState('');
-  const [page, setPage] = useState(1);
+  const [typeFilter, setTypeFilter] = useState('');
+  const [listPage, setListPage] = useState(1);
+  useEffect(() => {
+    setListPage(1);
+  }, [status, query, typeFilter]);
+  const [createParent, setCreateParent] = useState<number | undefined>();
   const [createOpen, setCreateOpen] = useState(false);
+  const [ariaDrawerId, setAriaDrawerId] = useState<number | null>(null);
+  const ariaDrawerIssue = issues.find((issue) => issue.id === ariaDrawerId);
   const [selectedId, setSelectedId] = useState<number | null>(() => {
     const match = window.location.hash.match(/^#issues\/(\d+)(?:\/aria)?$/);
     return match ? Number(match[1]) : null;
@@ -175,6 +222,7 @@ export default function App() {
     return m ? Number(m[1]) : null;
   });
   const [notice, setNotice] = useState('');
+  const noticeRef = useIssueMotion(notice);
   const [syncing, setSyncing] = useState(false);
   const [leftOpen, setLeftOpen] = useState(true);
   const [dev, setDev] = useState(false);
@@ -183,20 +231,20 @@ export default function App() {
   const [history, setHistory] = useState(false);
   const [featureSearch, setFeatureSearch] = useState('');
   const [featureView, setFeatureView] = useState('Accepted');
-  const [saved, setSaved] = useState(true);
   const searchRef = useRef<HTMLInputElement>(null);
   const selected = issues.find((i) => i.id === selectedId);
   const openIssue = (id: number) => {
+    setAriaDrawerId(null);
     window.history.pushState({ ccIssuePage: true }, '', `#issues/${id}`);
     setSelectedId(id);
     setTab('Issues');
   };
   const backToIssues = () => {
-    if (window.history.state?.ccIssuePage) window.history.back();
-    else window.history.replaceState(null, '', '#issues');
+    window.history.pushState(null, '', '#issues');
     setSelectedId(null);
   };
   const navigateSection = (name: string) => {
+    setAriaDrawerId(null);
     setFixId(null);
     setTicketId(null);
     window.history.pushState(null, '', name === 'Issues' ? '#issues' : '#features');
@@ -206,6 +254,10 @@ export default function App() {
   const openAria = (id: number) => {
     if (selectedId !== id) openIssue(id);
     setFixId(null);
+    const target = issues.find((i) => i.id === id);
+    if (target && target.status !== 'Completed' && (!target.run || target.run.phase === 'idle'))
+      start(id, '');
+    else revealActivity(id);
     requestAnimationFrame(() => {
       document
         .getElementById('issue-aria-workflow')
@@ -223,33 +275,48 @@ export default function App() {
     }
   };
   const ticket = issues.find((i) => i.id === ticketId);
-  const update = (id: number, changes: Partial<Issue>) =>
-    setIssues((prev) => prev.map((i) => (i.id === id ? { ...i, ...changes } : i)));
+  const update = (id: number, changes: Partial<Issue>) => {
+    const original = issues.find((i) => i.id === id);
+    if (!original) return;
+    const scopeLocked = issues.some(
+      (i) =>
+        ['executing', 'blocked'].includes(i.run?.phase || '') &&
+        (i.id === id || i.run?.scope?.some((item) => item.issueId === id)),
+    );
+    if (
+      scopeLocked &&
+      ['title', 'description', 'labels', 'label', 'parentIssueId', 'workItems'].some(
+        (key) => key in changes,
+      )
+    ) {
+      setNotice('Stop the active execution before changing its approved scope.');
+      return;
+    }
+    const candidate = { ...original, ...changes, updatedAt: new Date().toISOString() };
+    const error = validateIssue(candidate, issues);
+    if (error) {
+      setNotice(error);
+      return;
+    }
+    setIssues((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, ...changes, updatedAt: candidate.updatedAt } : i)),
+    );
+  };
   const updateRun = (id: number, changes: Partial<Run>) =>
     setIssues((prev) =>
       prev.map((i) => (i.id === id && i.run ? { ...i, run: { ...i.run, ...changes } } : i)),
     );
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE, JSON.stringify(issues));
-      setSaved(true);
-    } catch {
-      setSaved(false);
-    }
-  }, [issues]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(''), 3800);
     return () => clearTimeout(timer);
   }, [notice]);
   useEffect(() => {
-    setPage(1);
-  }, [status, source, query]);
-  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (
         e.key === '/' &&
         !createOpen &&
+        ariaDrawerId === null &&
         selectedId === null &&
         fixId === null &&
         ticketId === null &&
@@ -262,40 +329,9 @@ export default function App() {
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [createOpen, selectedId, fixId, ticketId]);
+  }, [createOpen, selectedId, fixId, ticketId, ariaDrawerId]);
   useEffect(() => {
-    const timer = setInterval(() => {
-      setIssues((prev) => {
-        let changed = false;
-        const next = prev.map((i) => {
-          if (!i.run?.startedAt) return i;
-          const elapsed = Date.now() - i.run.startedAt;
-          if (i.run.phase === 'analyzing' && elapsed > 2200) {
-            changed = true;
-            return { ...i, run: { ...i.run, phase: 'plan' as Phase, startedAt: undefined } };
-          }
-          if (i.run.phase === 'executing') {
-            const count = i.run.tasks.filter((t) => t.enabled).length;
-            const step = Math.min(count, Math.floor(elapsed / 2000));
-            if (step !== i.run.step) {
-              changed = true;
-              return {
-                ...i,
-                status: step === count ? ('In review' as Status) : i.status,
-                run: {
-                  ...i.run,
-                  step,
-                  phase: step === count ? ('completed' as Phase) : ('executing' as Phase),
-                  startedAt: step === count ? undefined : i.run.startedAt,
-                },
-              };
-            }
-          }
-          return i;
-        });
-        return changed ? next : prev;
-      });
-    }, 500);
+    const timer = setInterval(() => setIssues((prev) => tickDemo(prev)), 300);
     return () => clearInterval(timer);
   }, []);
   const filtered = useMemo(
@@ -303,60 +339,106 @@ export default function App() {
       issues.filter(
         (i) =>
           (status === 'All' || i.status === status) &&
-          (source === 'All sources' || i.source === source) &&
-          `${i.title} ${i.id} ${i.label}`.toLowerCase().includes(query.toLowerCase()),
+          (!typeFilter || workTypeOf(i) === typeFilter) &&
+          searchIssue(i, issues, query),
       ),
-    [issues, status, source, query],
+    [issues, status, query, typeFilter],
   );
-  const maxPage = Math.max(1, Math.ceil(filtered.length / 8));
-  const currentPage = Math.min(page, maxPage);
-  const shown = filtered.slice((currentPage - 1) * 8, currentPage * 8);
-  const start = (id: number, instructions: string) => {
-    const issue = issues.find((i) => i.id === id)!;
-    update(id, {
-      assignee: 'Aria',
-      run: {
-        phase: 'analyzing',
-        instructions,
-        tasks: taskPlan(issue.title),
-        step: 0,
-        startedAt: Date.now(),
-      },
-    });
+  const start = (id: number, instructions = '') => {
+    revealActivity(id);
+    setIssues((prev) =>
+      prev.map((issue) => {
+        if (
+          issue.id !== id ||
+          (['analyzing', 'clarification', 'plan', 'executing', 'blocked'].includes(
+            issue.run?.phase || '',
+          ) &&
+            !issue.run?.scopeChanged)
+        )
+          return issue;
+        return {
+          ...issue,
+          run: beginDemo(issue, prev, instructions, issue.run, autoMode),
+          runHistory: issue.run ? [...(issue.runHistory || []), issue.run] : issue.runHistory,
+        };
+      }),
+    );
+  };
+  const revise = (id: number, instructions: string) => {
+    revealActivity(id);
+    setIssues((prev) =>
+      prev.map((issue) =>
+        issue.id === id && issue.run?.phase === 'plan'
+          ? {
+              ...issue,
+              run: beginDemo(
+                issue,
+                prev,
+                [issue.run.instructions, instructions].filter(Boolean).join('\n'),
+                issue.run,
+              ),
+              runHistory: [...(issue.runHistory || []), issue.run],
+            }
+          : issue,
+      ),
+    );
   };
   const approve = (id: number) => {
-    const issue = issues.find((i) => i.id === id)!;
-    update(id, {
-      status: 'In progress',
-      assignee: 'Aria',
-      run: { ...issue.run!, phase: 'executing', step: 0, startedAt: Date.now() },
-    });
+    const issue = issues.find((i) => i.id === id);
+    if (!issue) return;
+    const error = approvalError(issue, issues);
+    if (error) {
+      setNotice(error);
+      return;
+    }
+    setIssues((prev) => approveDemo(prev, id));
   };
-  const create = (title: string, description: string, priority: Priority, plan: boolean) => {
+  const controlsFor = (id: number): AriaControls => ({
+    autoMode,
+    setAutoMode,
+    start: (instructions) => start(id, instructions),
+    update: (changes) => updateRun(id, changes),
+    approve: () => approve(id),
+    revise: (text) => revise(id, text),
+    answer: (text) =>
+      setIssues((prev) =>
+        prev.map((issue) =>
+          issue.id === id ? { ...issue, run: answerDemo(issue, text, prev) } : issue,
+        ),
+      ),
+    control: (action) => setIssues((prev) => controlDemo(prev, id, action)),
+  });
+  const quickAria = (id: number) => {
+    const issue = issues.find((item) => item.id === id);
+    if (!issue) return;
+    if (issue.status !== 'Completed' && (!issue.run || issue.run.phase === 'idle')) {
+      start(id);
+    } else {
+      setAriaDrawerId(id);
+    }
+  };
+  const create = (draft: Issue, plan: boolean) => {
     const id = Math.max(...issues.map((i) => i.id), 0) + 1;
-    setIssues((prev) => [
-      {
-        id,
-        title,
-        description,
-        priority,
-        status: 'To do',
-        label: 'Feature',
-        source: 'Studio',
-        assignee: '',
-        comments: 0,
-        date: 'Just now',
-      },
-      ...prev,
-    ]);
+    const issue = { ...draft, id };
+    if (plan) {
+      issue.run = beginDemo(issue, issues, '', undefined, autoMode);
+      revealActivity(id);
+      issue.draftPlanId = issue.run.planId;
+    }
+    setIssues((prev) => [issue, ...prev]);
     setCreateOpen(false);
-    setStatus('All');
-    setSource('All sources');
-    setQuery('');
-    setPage(1);
+    setCreateParent(undefined);
     setNotice('Issue created');
     openIssue(id);
-    if (plan) openAria(id);
+  };
+  const openCreate = (parent?: number) => {
+    setCreateParent(parent);
+    setCreateOpen(true);
+  };
+  const clearFilters = () => {
+    setQuery('');
+    setStatus('All');
+    setTypeFilter('');
   };
   const existingAction = (name: string) => setNotice(`${name} is unavailable right now.`);
   const openTicket = (id: number) => {
@@ -413,14 +495,11 @@ export default function App() {
         <p>{ticket.description}</p>
         <div className="cc-ticket-preview-meta">
           <Source source={ticket.source} />
-          <span className={cx('cc-status', ticket.status.toLowerCase().replaceAll(' ', '-'))}>
-            <StatusMark status={ticket.status} />
-            {ticket.status}
-          </span>
+          <StatusBadge issue={ticket} />
         </div>
         <div className="cc-ticket-url">
           <ExternalLink size={15} />
-          <code>gitlab.com/your-workspace/realtime-dashboard/-/issues/{ticket.id}</code>
+          <span>The repository ticket URL is not available for this issue.</span>
         </div>
       </div>
       <div className="modal-footer">
@@ -685,23 +764,21 @@ export default function App() {
             selected ? (
               <IssueDetails
                 key={selected.id}
+                layout={detailLayout}
+                onLayout={setDetailLayout}
                 issue={selected}
+                issues={issues}
+                onOpen={openIssue}
+                onFix={openAria}
+                onCreateChild={openCreate}
+                onAssociate={(id, parentIssueId) => update(id, { parentIssueId })}
                 onClose={backToIssues}
                 onChange={(c) => update(selected.id, c)}
-                ariaWorkflow={
-                  <AriaWorkspace
-                    key={selected.id}
-                    issue={selected}
-                    onClose={backToIssues}
-                    onStart={(instructions) => start(selected.id, instructions)}
-                    onRunUpdate={(changes) => updateRun(selected.id, changes)}
-                    onApprove={() => approve(selected.id)}
-                    onDone={() => {
-                      update(selected.id, { status: 'Done' });
-                      setNotice('Issue marked as done');
-                    }}
-                  />
+                preference={preferenceFor(selected.id)}
+                onPreference={(p) =>
+                  setWorkspacePreferences((prev) => ({ ...prev, [selected.id]: p }))
                 }
+                ariaControls={controlsFor(selected.id)}
                 onTicket={() => openTicket(selected.id)}
               />
             ) : (
@@ -725,6 +802,7 @@ export default function App() {
                   <p>Plan, track, and ship your next update.</p>
                 </div>
                 <div className="cc-issues-header-actions">
+                  <AutoModeToggle enabled={autoMode} onChange={setAutoMode} />
                   <div className="cc-connected">
                     <Gitlab size={15} />
                     <span>GitLab connected</span>
@@ -733,7 +811,7 @@ export default function App() {
                       <RefreshCw size={14} className={syncing ? 'spin' : ''} />
                     </button>
                   </div>
-                  <button className="button primary" onClick={() => setCreateOpen(true)}>
+                  <button className="button primary" onClick={() => openCreate()}>
                     <Plus size={16} />
                     New issue
                   </button>
@@ -745,6 +823,19 @@ export default function App() {
                     <button
                       key={s}
                       role="tab"
+                      onKeyDown={(e) => {
+                        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                          e.preventDefault();
+                          const options = ['All', ...statuses];
+                          const index =
+                            (options.indexOf(s) +
+                              (e.key === 'ArrowRight' ? 1 : -1) +
+                              options.length) %
+                            options.length;
+                          setStatus(options[index]);
+                          (e.currentTarget.parentElement?.children[index] as HTMLElement)?.focus();
+                        }
+                      }}
                       aria-selected={status === s}
                       className={status === s ? 'active' : ''}
                       onClick={() => setStatus(s)}
@@ -779,13 +870,14 @@ export default function App() {
                   )}
                 </label>
                 <select
-                  aria-label="Filter by creation source"
-                  value={source}
-                  onChange={(e) => setSource(e.target.value)}
+                  aria-label="Filter by type"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
                 >
-                  <option>All sources</option>
-                  <option value="Studio">Created in CC Studio</option>
-                  <option value="GitLab">Created in GitLab</option>
+                  <option value="">All types</option>
+                  {['Issue', 'Story', 'Epic'].map((type) => (
+                    <option key={type}>{type}</option>
+                  ))}
                 </select>
                 <span className="cc-filtered-count">{filtered.length} issues</span>
                 <div className="cc-view-toggle" role="group" aria-label="Issue view">
@@ -813,141 +905,44 @@ export default function App() {
                     <IssueBoard
                       issues={filtered}
                       onOpen={openIssue}
-                      onFix={openAria}
+                      onFix={quickAria}
                       onTicket={openTicket}
-                      onMove={(id, nextStatus) => {
-                        update(id, { status: nextStatus });
-                        setNotice(`Issue #${id} moved to ${nextStatus}`);
-                      }}
+                      allIssues={issues}
                     />
                   </div>
                   <div className="cc-board-hint">
                     <span>{filtered.length} issues · grouped by status</span>
-                    <span>Drag to move, or use a card’s dropdown</span>
+                    <span>Status follows approved execution</span>
                   </div>
                 </>
               ) : (
-                <>
-                  <div className="cc-table-scroll">
-                    <table className="cc-issue-table">
-                      <thead>
-                        <tr>
-                          <th>Issue</th>
-                          <th>Status</th>
-                          <th>Created in</th>
-                          <th>GitLab ticket</th>
-                          <th>
-                            <span className="cc-table-aria">
-                              <Sparkles size={13} />
-                              Aria
-                            </span>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {shown.map((i) => (
-                          <tr key={i.id}>
-                            <td>
-                              <button className="cc-issue-title" onClick={() => openIssue(i.id)}>
-                                {i.title}
-                              </button>
-                              <div className="cc-issue-subline">
-                                <span className={cx('cc-type', i.label.toLowerCase())}>
-                                  {i.label}
-                                </span>
-                                <span className={cx('cc-priority', i.priority.toLowerCase())}>
-                                  <i />
-                                  {i.priority}
-                                </span>
-                              </div>
-                            </td>
-                            <td>
-                              <button
-                                className={cx(
-                                  'cc-status',
-                                  i.status.toLowerCase().replaceAll(' ', '-'),
-                                )}
-                                onClick={() => openIssue(i.id)}
-                              >
-                                <StatusMark status={i.status} />
-                                {i.status}
-                              </button>
-                            </td>
-                            <td>
-                              <Source source={i.source} />
-                            </td>
-                            <td>
-                              <a
-                                className="cc-ticket"
-                                href={`#gitlab-issue-${i.id}`}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openTicket(i.id);
-                                }}
-                                aria-label={`View GitLab ticket #${i.id}`}
-                              >
-                                <span>#{i.id}</span>
-                                <ExternalLink size={12} />
-                              </a>
-                            </td>
-                            <td>
-                              <AriaAction issue={i} onClick={() => openAria(i.id)} />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {!shown.length && (
-                      <div className="cc-empty">
-                        <Search size={25} />
-                        <h3>No issues found</h3>
-                        <p>Try another search or choose a different filter.</p>
-                        <button
-                          className="button"
-                          onClick={() => {
-                            setQuery('');
-                            setSource('All sources');
-                            setStatus('All');
-                          }}
-                        >
-                          Clear filters
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="cc-pagination">
-                    <span>
-                      {filtered.length
-                        ? `${(currentPage - 1) * 8 + 1}–${Math.min(currentPage * 8, filtered.length)} of ${filtered.length} issues`
-                        : '0 issues'}
-                    </span>
-                    <div>
-                      <button
-                        aria-label="Previous page"
-                        disabled={currentPage === 1}
-                        onClick={() => setPage(currentPage - 1)}
-                      >
-                        <ChevronLeft size={16} />
-                      </button>
-                      <span>
-                        {currentPage} <small>/ {maxPage}</small>
-                      </span>
-                      <button
-                        aria-label="Next page"
-                        disabled={currentPage === maxPage}
-                        onClick={() => setPage(currentPage + 1)}
-                      >
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </>
+                <IssueList
+                  page={listPage}
+                  onPage={setListPage}
+                  issues={filtered}
+                  allIssues={issues}
+                  groupBy="None"
+                  onPriorityChange={(id, priority) => update(id, { priority })}
+                  onOpen={openIssue}
+                  onFix={quickAria}
+                  onTicket={openTicket}
+                  onClear={clearFilters}
+                />
               )}
               <div className="cc-aria-note">
                 <AriaAvatar small />
                 <span>
-                  <strong>You’re always in control.</strong> Aria starts only after you approve the
-                  plan.
+                  {autoMode ? (
+                    <>
+                      <strong>Auto mode is on.</strong> New runs plan and execute automatically. You
+                      can stop a run at any time.
+                    </>
+                  ) : (
+                    <>
+                      <strong>You’re always in control.</strong> Aria starts only after you approve
+                      the plan.
+                    </>
+                  )}
                 </span>
               </div>
             </section>
@@ -955,14 +950,28 @@ export default function App() {
         </main>
       </div>
       <footer className="cc-footer">© 2026 CodeConductorAI, Inc.</footer>
-      {!saved && (
-        <div className="cc-storage-warning">
-          Changes are available for this session only; browser storage is unavailable.
-        </div>
+      {createOpen && (
+        <CreateIssue
+          issues={issues}
+          parentId={createParent}
+          onClose={() => setCreateOpen(false)}
+          onCreate={create}
+        />
       )}
-      {createOpen && <CreateIssue onClose={() => setCreateOpen(false)} onCreate={create} />}
+      {ariaDrawerIssue && (
+        <AriaReviewDrawer
+          issue={ariaDrawerIssue}
+          issues={issues}
+          controls={controlsFor(ariaDrawerIssue.id)}
+          onClose={() => setAriaDrawerId(null)}
+          onExpand={() => {
+            setDetailLayout('split');
+            openIssue(ariaDrawerIssue.id);
+          }}
+        />
+      )}
       {notice && (
-        <div className="cc-toast" role="status">
+        <div ref={noticeRef} className="cc-toast" role="status">
           <CheckCircle2 size={17} />
           {notice}
           <button aria-label="Dismiss notification" onClick={() => setNotice('')}>
@@ -974,97 +983,39 @@ export default function App() {
   );
 }
 
-function CreateIssue({
-  onClose,
-  onCreate,
-}: {
-  onClose: () => void;
-  onCreate: (title: string, description: string, priority: Priority, plan: boolean) => void;
-}) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<Priority>('Medium');
-  const [plan, setPlan] = useState(true);
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    if (title.trim()) onCreate(title.trim(), description.trim(), priority, plan);
-  };
-  return (
-    <Modal title="New issue" subtitle="Add a task to Realtime Dashboard." onClose={onClose} drawer>
-      <form onSubmit={submit}>
-        <div className="modal-body form-stack">
-          <label>
-            Issue title{' '}
-            <span className="cc-required" aria-hidden="true">
-              *
-            </span>
-            <input
-              autoFocus
-              required
-              maxLength={160}
-              placeholder="What needs to be done?"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </label>
-          <label>
-            Description<span className="optional">Optional</span>
-            <textarea
-              rows={6}
-              placeholder="Describe the expected outcome or what needs fixing..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </label>
-          <label>
-            Priority
-            <select value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
-              {['High', 'Medium', 'Low'].map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-            </select>
-          </label>
-          <div className="cc-create-source">
-            <Source source="Studio" />
-            <span>Created here, linked to a GitLab ticket.</span>
-            <Gitlab size={16} />
-          </div>
-          <label className="cc-plan-checkbox">
-            <input type="checkbox" checked={plan} onChange={(e) => setPlan(e.target.checked)} />
-            <span>
-              <strong>Make a plan with Aria</strong>
-              <small>Review the tasks before anything starts.</small>
-            </span>
-            <AriaAvatar small />
-          </label>
-        </div>
-        <div className="modal-footer">
-          <button type="button" className="button" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="button primary" disabled={!title.trim()}>
-            {plan ? <Sparkles size={15} /> : <Plus size={15} />}{' '}
-            {plan ? 'Create & plan' : 'Create issue'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
 function IssueDetails({
+  layout,
+  onLayout,
   issue,
+  issues,
+  onOpen,
+  onFix,
+  onCreateChild,
+  onAssociate,
   onClose,
   onChange,
-  ariaWorkflow,
+  ariaControls,
+  preference,
+  onPreference,
   onTicket,
 }: {
+  layout: 'current' | 'split';
+  onLayout: (layout: 'current' | 'split') => void;
   issue: Issue;
+  issues: Issue[];
+  onOpen: (id: number) => void;
+  onFix: (id: number) => void;
+  onCreateChild: (parent: number) => void;
+  onAssociate: (id: number, parentId: number | null) => void;
   onClose: () => void;
   onChange: (changes: Partial<Issue>) => void;
-  ariaWorkflow: ReactNode;
+  ariaControls: AriaControls;
+  preference: WorkspacePreference;
+  onPreference: (p: WorkspacePreference) => void;
   onTicket: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const detailMotion = useIssueMotion(issue.id);
   const [title, setTitle] = useState(issue.title);
   const [description, setDescription] = useState(issue.description);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -1076,21 +1027,57 @@ function IssueDetails({
     onChange({ title: title.trim(), description: description.trim() });
     setEditing(false);
   };
-  return (
-    <section className="cc-issue-page" aria-label="Issue details">
-      <div className="cc-detail-navigation">
-        <button className="cc-back-button" onClick={onClose}>
-          <ArrowLeft size={16} />
-          Back to issues
-        </button>
-        <span>
-          Realtime Dashboard <ChevronRight size={12} /> Issue #{issue.id}
-        </span>
-      </div>
-      <header className="cc-issue-page-header cc-integrated-header">
+  const issueEditControls = !editing ? (
+    <button className="text-button" onClick={() => setEditing(true)}>
+      <Pencil size={13} />
+      Edit issue
+    </button>
+  ) : (
+    <div className="cc-edit-actions">
+      <button
+        className="button"
+        onClick={() => {
+          setTitle(issue.title);
+          setDescription(issue.description);
+          setEditing(false);
+        }}
+      >
+        Cancel
+      </button>
+      <button className="button primary" disabled={!title.trim()} onClick={save}>
+        Save changes
+      </button>
+    </div>
+  );
+  const issueDescription = (
+    <section className="cc-description-section" aria-label="Issue description">
+      {layout !== 'split' && (
+        <div className="cc-section-heading" style={{ justifyContent: 'flex-end' }}>
+          {issueEditControls}
+        </div>
+      )}
+      {editing ? (
+        <textarea
+          aria-label="Issue description"
+          rows={8}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      ) : (
+        <p>
+          {issue.description ||
+            'No description added yet. Add context to help your team get started.'}
+        </p>
+      )}
+    </section>
+  );
+  const issueHeader = (
+    <header className="cc-issue-page-header cc-integrated-header">
+      <div className="cc-header-summary">
         <div className="cc-detail-kicker">
-          <span className={`cc-type ${issue.label.toLowerCase()}`}>{issue.label}</span>
+          {layout !== 'split' && <IssueLabels issue={issue} />}
           <span>ISSUE #{issue.id}</span>
+          {layout === 'split' && issueEditControls}
         </div>
         {editing ? (
           <label className="cc-edit-title-label">
@@ -1107,6 +1094,21 @@ function IssueDetails({
             {issue.title}
           </h1>
         )}
+        {layout === 'split' && issueDescription}
+        <div className="cc-organize-line">
+          {ancestors(issue, issues)
+            .filter((p) => hasLabel(p, 'Epic') || hasLabel(p, 'Story'))
+            .map((p) => (
+              <button key={p.id} onClick={() => onOpen(p.id)}>
+                <span className={`cc-type ${hasLabel(p, 'Epic') ? 'epic' : 'story'}`}>
+                  {hasLabel(p, 'Epic') ? 'Epic' : 'Story'}
+                </span>
+                {p.title}
+              </button>
+            ))}
+        </div>
+      </div>
+      <div className="cc-header-metadata">
         <div className="cc-detail-byline">
           <span>
             Created in <Source source={issue.source} />
@@ -1124,19 +1126,26 @@ function IssueDetails({
         </div>
         <div className="cc-issue-properties cc-header-properties" aria-label="Issue properties">
           <label>
-            Status
+            Type
             <select
-              value={issue.status}
-              onChange={(e) => onChange({ status: e.target.value as Status })}
+              aria-label="Issue type"
+              value={workTypeOf(issue)}
+              onChange={(e) => onChange(workTypeChanges(issue, e.target.value as WorkType, issues))}
             >
-              {statuses.map((s) => (
-                <option key={s}>{s}</option>
+              {['Issue', 'Story', 'Epic'].map((type) => (
+                <option key={type}>{type}</option>
               ))}
             </select>
           </label>
+          <div className="cc-status-property">
+            <span>Status</span>
+            <StatusBadge issue={issue} />
+            <SecondaryBadge issue={issue} />
+          </div>
           <label>
             Priority
             <select
+              aria-label="Issue priority"
               value={issue.priority}
               onChange={(e) => onChange({ priority: e.target.value as Priority })}
             >
@@ -1146,77 +1155,70 @@ function IssueDetails({
             </select>
           </label>
         </div>
-      </header>
-      <div className="cc-issue-page-grid">
-        <div className="cc-issue-page-content">
-          <section className="cc-description-section">
-            <div className="cc-section-heading">
-              <h2>Description</h2>
-              {!editing ? (
-                <button className="text-button" onClick={() => setEditing(true)}>
-                  <Pencil size={13} />
-                  Edit issue
-                </button>
-              ) : (
-                <div className="cc-edit-actions">
-                  <button
-                    className="button"
-                    onClick={() => {
-                      setTitle(issue.title);
-                      setDescription(issue.description);
-                      setEditing(false);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button className="button primary" disabled={!title.trim()} onClick={save}>
-                    Save changes
-                  </button>
-                </div>
-              )}
-            </div>
-            {editing ? (
-              <textarea
-                aria-label="Issue description"
-                rows={8}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            ) : (
-              <p>
-                {issue.description ||
-                  'No description added yet. Add context to help your team get started.'}
-              </p>
-            )}
-          </section>
-          <section className="cc-page-aria">
-            <div className="cc-aria-section-mascot">
-              <AriaAvatar />
-            </div>
-            <div className="cc-page-aria-heading">
-              <div>
-                <span className="cc-section-eyebrow">YOUR CODING TEAMMATE</span>
-                <h2>
-                  {issue.status === 'Done'
-                    ? 'This issue is complete'
-                    : issue.run
-                      ? phaseLabels[issue.run.phase]
-                      : 'Let Aria take it from here'}
-                </h2>
+      </div>
+    </header>
+  );
+
+  return (
+    <section
+      className={`cc-issue-page ${layout === 'split' ? 'sw-page' : ''}`}
+      aria-label="Issue details"
+    >
+      <div className="cc-detail-navigation">
+        <button className="cc-back-button" onClick={onClose}>
+          <ArrowLeft size={16} />
+          Back to issues
+        </button>
+        <div className="sw-layout-toggle" role="group" aria-label="Compare issue layouts">
+          <button aria-pressed={layout === 'current'} onClick={() => onLayout('current')}>
+            Current
+          </button>
+          <button aria-pressed={layout === 'split'} onClick={() => onLayout('split')}>
+            <Columns3 size={13} /> Split workspace
+          </button>
+        </div>
+        <span>
+          <button onClick={onClose}>Issues</button>
+          {ancestors(issue, issues).map((parent) => (
+            <span key={parent.id} className="cc-breadcrumb-parent">
+              <ChevronRight size={12} />
+              <button onClick={() => onOpen(parent.id)}>{parent.title}</button>
+            </span>
+          ))}
+          <ChevronRight size={12} /> Issue #{issue.id}
+        </span>
+      </div>
+      {layout === 'split' ? (
+        <SplitIssueWorkspace
+          issue={issue}
+          issues={issues}
+          header={issueHeader}
+          controls={ariaControls}
+          onOpen={onOpen}
+          onChange={onChange}
+        />
+      ) : (
+        <>
+          {issueHeader}
+          <IssueDetailsWorkspace issue={issue} preference={preference} onPreference={onPreference}>
+            <div ref={detailMotion} className="cc-issue-page-grid">
+              <div className="cc-issue-page-content">
+                {issueDescription}
+                <AriaPlanPanel issue={issue} controls={ariaControls} />
+                <ChildIssues
+                  issue={issue}
+                  issues={issues}
+                  onOpen={onOpen}
+                  onFix={onFix}
+                  onCreate={onCreateChild}
+                  onAssociate={onAssociate}
+                />
+                <IssueContext issue={issue} onChange={onChange} />
               </div>
             </div>
-            <p>
-              {issue.status === 'Done'
-                ? 'The issue has been marked as resolved. You can revisit its status in the details panel.'
-                : issue.run
-                  ? 'Review the proposed tasks or follow Aria’s progress on this issue.'
-                  : 'Aria turns this issue into a clear plan, then handles the code. You review and approve before execution starts.'}
-            </p>
-            {ariaWorkflow}
-          </section>
-          <IssueContext issue={issue} onChange={onChange} />
-        </div>
-      </div>
+          </IssueDetailsWorkspace>
+        </>
+      )}
     </section>
   );
 }

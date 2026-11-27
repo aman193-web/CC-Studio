@@ -1,0 +1,1333 @@
+/* Alternative B: issue context and committed work beside Aria's proposals. */
+.sw-layout-toggle {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #e7def0;
+  background: #f7f3fb;
+  border-radius: 7px;
+  flex-shrink: 0;
+}
+.sw-layout-toggle button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  color: #8a749a;
+  white-space: nowrap;
+}
+.sw-layout-toggle button[aria-pressed='true'] {
+  color: #7148a0;
+  background: white;
+  box-shadow: 0 1px 4px #62418013;
+}
+.cc-detail-navigation .sw-layout-toggle {
+  margin-left: auto;
+}
+.cc-detail-navigation:has(.sw-layout-toggle) > span {
+  display: none;
+}
+.cc-issue-page.sw-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 186px);
+  min-height: 460px;
+  padding: 0;
+  overflow: hidden;
+}
+.sw-page > .cc-detail-navigation {
+  margin: 0;
+  padding: 0 20px;
+  min-height: 48px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #eae3f2;
+}
+.sw-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+}
+.sw-issue,
+.sw-ai {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sw-issue {
+  border-right: 1px solid #e5dbee;
+}
+.sw-ai {
+  background: #fbf9fe;
+}
+.sw-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 43px;
+  padding: 10px 22px;
+  border-bottom: 1px solid #eee7f4;
+  flex-shrink: 0;
+  color: #735a85;
+  font-size: 12px;
+  font-weight: 500;
+}
+.sw-panel-heading > span {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+}
+.sw-panel-heading small {
+  font-size: 11px;
+  color: #9b86aa;
+  font-weight: 400;
+}
+.sw-issue-scroll,
+.sw-ai-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-padding: 18px;
+}
+.sw-issue-scroll .cc-integrated-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 20px 22px 16px;
+  margin: 0;
+  border-bottom: 1px solid #eee7f4;
+}
+.sw-issue-scroll .cc-detail-kicker {
+  margin: 0 0 7px;
+  font-size: 10px;
+}
+.sw-issue-scroll .cc-integrated-header h1 {
+  font-size: 23px;
+  line-height: 1.3;
+  margin: 0;
+  letter-spacing: -0.4px;
+}
+.sw-issue-scroll .cc-detail-byline {
+  order: 4;
+  margin-top: 14px;
+  gap: 7px 9px;
+  font-size: 12px;
+  color: #8b7899;
+}
+.sw-issue-scroll .cc-header-properties {
+  order: 3;
+  align-self: stretch;
+  margin-top: 18px;
+  gap: 16px;
+}
+.sw-issue-scroll .cc-header-properties > label {
+  min-width: 100px;
+}
+.sw-issue-scroll .cc-organize-line {
+  order: 5;
+  margin-top: 10px;
+  font-size: 11.5px;
+}
+.sw-issue-scroll .cc-organize-line:empty {
+  display: none;
+}
+.sw-issue-content {
+  padding: 18px 22px 28px;
+}
+.sw-issue-content .cc-description-section {
+  border: 0;
+  padding: 0;
+}
+.sw-issue-content h2 {
+  font-size: 16px;
+  line-height: 1.4;
+}
+.sw-issue-content .cc-section-heading {
+  margin-bottom: 7px;
+}
+.sw-issue-content .cc-description-section p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #786486;
+}
+.sw-committed {
+  margin-top: 22px;
+  scroll-margin-top: 16px;
+  outline: none;
+}
+.sw-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+.sw-section-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+}
+.sw-section-heading > span {
+  font-size: 11px;
+  color: #917c9f;
+  white-space: nowrap;
+}
+.sw-tasks-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 14px;
+  border: 1px dashed #e0d4ec;
+  border-radius: 8px;
+  background: #fdfbff;
+  color: #af95c4;
+}
+.sw-tasks-empty strong {
+  font-size: 13px;
+  font-weight: 500;
+  color: #826892;
+}
+.sw-tasks-empty p {
+  font-size: 12px;
+  margin: 5px 0 0;
+  color: #9882a7;
+  line-height: 1.5;
+}
+.sw-committed progress {
+  display: block;
+  width: 100%;
+  height: 4px;
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: #eee6f5;
+}
+.sw-committed progress::-webkit-progress-bar {
+  background: #eee6f5;
+}
+.sw-committed progress::-webkit-progress-value {
+  background: #a680c6;
+}
+.sw-committed progress::-moz-progress-bar {
+  background: #a680c6;
+}
+.sw-task-group {
+  border: 1px solid #e7ddef;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.sw-task + .sw-task {
+  border-top: 1px solid #eee6f5;
+}
+.sw-task summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  list-style: none;
+  cursor: pointer;
+}
+.sw-task summary > svg {
+  color: #a08ab1;
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+}
+.sw-task[open] summary > svg {
+  transform: none;
+}
+.sw-task-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #675176;
+  font-weight: 500;
+}
+.sw-task-name small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: #9b85aa;
+  margin-top: 3px;
+}
+.sw-task .cc-status {
+  font-size: 10px;
+  padding: 4px 6px;
+  min-height: 23px;
+  flex-shrink: 0;
+}
+.sw-task .cc-status svg {
+  width: 11px;
+  height: 11px;
+}
+.sw-task.is-complete summary {
+  background: #fcfefc;
+}
+.sw-task-body {
+  padding: 0 12px 12px 34px;
+}
+.sw-task-body > p {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #8b739a;
+}
+.sw-subtask {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid #f0eaf5;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #7d668d;
+}
+.sw-subtask > span:nth-child(2) {
+  flex: 1;
+}
+.sw-subtask > span:first-child {
+  color: #b4a1c3;
+  padding-top: 2px;
+}
+.sw-subtask > span.done {
+  color: #6f9c7b;
+}
+.sw-subtask i {
+  display: block;
+  width: 11px;
+  height: 11px;
+  border: 1px solid #d4c6df;
+  border-radius: 50%;
+}
+.sw-subtask small {
+  font-size: 10px;
+  color: #9a85a9;
+  white-space: nowrap;
+}
+.sw-group-link {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #7e5e94;
+  background: #faf7fe;
+  width: 100%;
+  text-align: left;
+  border-bottom: 1px solid #ece3f4;
+}
+.sw-group-link span,
+.sw-related button > span {
+  font-size: 10px;
+  color: #aa8dbf;
+}
+.sw-group-link svg {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.sw-related {
+  margin-top: 18px;
+  font-size: 12px;
+  color: #8a709c;
+}
+.sw-related summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.sw-related summary span {
+  margin-left: auto;
+}
+.sw-related button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0e9f5;
+  width: 100%;
+  text-align: left;
+}
+.sw-related button svg {
+  margin-left: auto;
+}
+.sw-issue-content .cc-issue-context {
+  margin-top: 24px;
+}
+.sw-issue-content .cc-context-tabs {
+  gap: 14px;
+  padding: 0 14px;
+}
+.sw-issue-content .cc-context-panel {
+  padding: 14px;
+}
+.sw-ai-scroll {
+  padding: 18px 20px 24px;
+  scroll-padding-bottom: 90px;
+}
+.sw-ai .ap-panel {
+  margin: 0;
+  background: white;
+  padding: 18px;
+  border-color: #e2d5ef;
+  box-shadow: 0 3px 12px #7a4ba505;
+}
+.sw-ai .ap-heading h2 {
+  font-size: 18px;
+}
+.sw-ai .ap-idle .ap-heading {
+  flex-wrap: wrap;
+}
+.sw-ai .ap-idle .ap-heading > div {
+  flex-basis: calc(100% - 55px);
+}
+.sw-ai .ap-idle .ap-start {
+  order: 3;
+  margin: 12px 0 0 51px;
+}
+.sw-ai .ap-idle > p {
+  margin: 12px 0 10px;
+  font-size: 13px;
+  color: #81658e;
+}
+.sw-ai .ap-idle .ap-instructions {
+  margin: 0;
+}
+.sw-ai .ap-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: white;
+  padding: 12px 0 5px;
+  box-shadow: 0 -8px 14px #ffffffeb;
+}
+.sw-ai .ap-actions small {
+  width: 100%;
+}
+.sw-ai .ap-task > summary {
+  gap: 7px;
+}
+.sw-transfer-note {
+  display: flex;
+  gap: 10px;
+  padding: 14px;
+  margin: 14px 0;
+  border-radius: 7px;
+  border: 1px solid #e1d7ee;
+  background: #faf7ff;
+  color: #a184b8;
+}
+.sw-transfer-note > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.sw-transfer-note strong {
+  font-size: 13px;
+  color: #78588e;
+  font-weight: 500;
+}
+.sw-transfer-note p {
+  margin: 5px 0 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.sw-workflow-guide {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  padding: 18px 0;
+  font-size: 10.5px;
+  color: #a088b3;
+}
+.sw-workflow-guide span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.sw-activity {
+  margin-top: 18px;
+}
+.sw-activity > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 5px 0 12px;
+  border-bottom: 1px solid #e8dff1;
+  color: #7c618f;
+  font-size: 12px;
+  font-weight: 500;
+}
+.sw-activity > summary > span {
+  margin-left: auto;
+  font-size: 11px;
+  color: #a087b3;
+  font-weight: 400;
+}
+.sw-activity .aa-feed {
+  padding: 0 0 8px;
+  overflow: visible;
+}
+.sw-activity .aa-timeline-heading {
+  display: none;
+}
+.sw-activity .aa-attempt {
+  margin-top: 14px;
+}
+.sw-mobile-tabs {
+  display: none;
+}
+@media (max-width: 850px) {
+  .cc-issue-page.sw-page {
+    height: calc(100dvh - 190px);
+    min-height: 540px;
+  }
+  .sw-page > .cc-detail-navigation {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .sw-layout-toggle button {
+    font-size: 10.5px;
+    padding: 5px 6px;
+  }
+  .sw-workspace {
+    display: flex;
+    flex-direction: column;
+  }
+  .sw-mobile-tabs {
+    display: flex;
+    padding: 7px 12px;
+    background: #f9f6fd;
+    gap: 6px;
+    border-bottom: 1px solid #eae1f3;
+  }
+  .sw-mobile-tabs button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    color: #987eaa;
+  }
+  .sw-mobile-tabs button[aria-pressed='true'] {
+    background: white;
+    color: #765191;
+    box-shadow: 0 1px 3px #78549110;
+  }
+  .sw-mobile-tabs i {
+    width: 5px;
+    height: 5px;
+    background: #a77dcb;
+    border-radius: 50%;
+  }
+  .sw-issue,
+  .sw-ai {
+    flex: 1;
+    border: 0;
+  }
+  .sw-tab-issue .sw-ai,
+  .sw-tab-aria .sw-issue {
+    display: none;
+  }
+  .sw-panel-heading {
+    padding: 10px 16px;
+  }
+  .sw-issue-scroll .cc-integrated-header {
+    padding: 16px;
+  }
+  .sw-issue-scroll .cc-integrated-header h1 {
+    font-size: 21px;
+  }
+  .sw-issue-content,
+  .sw-ai-scroll {
+    padding: 16px;
+  }
+  .sw-issue-scroll .cc-header-properties {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .sw-issue-scroll .cc-header-properties > label {
+    min-width: 80px;
+  }
+  .sw-section-heading {
+    flex-wrap: wrap;
+  }
+  .sw-ai .ap-panel {
+    padding: 14px;
+  }
+  .sw-task summary {
+    flex-wrap: wrap;
+  }
+  .sw-task-name {
+    min-width: 145px;
+  }
+}
+.sw-start-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #eee6f5;
+}
+.sw-ai .ap-idle .sw-start-row .ap-start {
+  margin: 0;
+}
+.sw-start-row > span {
+  font-size: 11px;
+  color: #a58eb4;
+}
+.sw-ai .ap-idle > p {
+  margin-top: 14px;
+  margin-bottom: 14px;
+  line-height: 1.65;
+}
+
+/* Refined split: content first, with a full-width Aria welcome. */
+.sw-workspace {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+.sw-issue-scroll .cc-integrated-header {
+  padding: 22px 26px 18px;
+}
+.sw-issue-scroll .cc-integrated-header h1 {
+  font-size: 25px;
+  color: #48364f;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
+}
+.sw-issue-scroll .cc-description-section {
+  order: 1;
+  padding: 0;
+  margin-top: 17px;
+  border: 0;
+}
+.sw-issue-scroll .cc-description-section .cc-section-heading {
+  margin-bottom: 6px;
+  gap: 12px;
+}
+.sw-issue-scroll .cc-description-section h2 {
+  font-size: 12px;
+  letter-spacing: 0;
+  font-weight: 500;
+  color: #9880a7;
+}
+.sw-issue-scroll .cc-description-section p {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #796484;
+  margin: 0;
+}
+.sw-issue-scroll .cc-description-section .text-button {
+  font-size: 11.5px;
+  color: #9372ab;
+}
+.sw-issue-scroll .cc-header-properties {
+  order: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-top: 18px;
+  padding-top: 15px;
+  border-top: 1px solid #eee7f4;
+}
+.sw-issue-scroll .cc-header-properties > label,
+.sw-issue-scroll .cc-status-property {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11.5px;
+  color: #927c9f;
+}
+.sw-issue-scroll .cc-header-properties select {
+  width: auto;
+  min-width: 85px;
+  height: 32px;
+  min-height: 32px;
+  padding: 5px 26px 5px 9px;
+  font-size: 12px;
+  border-radius: 6px;
+  background-color: #fdfbff;
+}
+.sw-issue-scroll .cc-header-properties .cc-status {
+  height: 32px;
+  min-height: 32px;
+  font-size: 12px;
+  padding: 5px 9px;
+}
+.sw-issue-scroll .cc-detail-byline {
+  margin-top: 13px;
+  font-size: 11.5px;
+  gap: 6px 9px;
+}
+.sw-issue-scroll .cc-organize-line {
+  margin-top: 9px;
+  font-size: 11px;
+  gap: 7px 12px;
+}
+.sw-issue-scroll .cc-organize-line .cc-type {
+  padding: 3px 5px;
+  font-size: 10px;
+}
+.sw-issue-content {
+  padding: 20px 26px 28px;
+}
+.sw-committed {
+  margin-top: 0;
+}
+.sw-committed:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid #dac7ee;
+  outline-offset: 6px;
+}
+.sw-section-heading {
+  margin-bottom: 12px;
+}
+.sw-issue-content .cc-issue-context {
+  margin-top: 22px;
+}
+.sw-task summary:hover,
+.sw-task summary:focus-visible {
+  background: #faf7fe;
+}
+.sw-task summary:focus-visible,
+.sw-related summary:focus-visible {
+  outline: 2px solid #d5bce8;
+  outline-offset: -2px;
+}
+.sw-ai-scroll:has(.ap-idle) {
+  padding: 0;
+}
+.sw-ai .ap-idle {
+  width: 100%;
+  padding: 36px 26px 28px;
+  border: 0;
+  border-bottom: 1px solid #e9dff3;
+  border-radius: 0;
+  background:
+    radial-gradient(ellipse 65% 40% at 50% 6%, #eee4fb 0%, transparent 100%),
+    linear-gradient(#fcfaff, #fff);
+  box-shadow: none;
+}
+.sw-ai .ap-idle .ap-heading {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 17px;
+  text-align: center;
+  margin: 0;
+}
+.sw-ai .ap-idle .ap-heading .aria-avatar {
+  width: 88px;
+  height: 88px;
+  position: relative;
+  margin: 0 auto;
+}
+.sw-ai .ap-idle .aria-avatar::before {
+  content: '';
+  position: absolute;
+  inset: -13px;
+  border: 1px solid #e6d8f6;
+  border-radius: 50%;
+  background: #faf6ff70;
+  box-shadow: 0 0 0 12px #f5edfc55;
+}
+.sw-ai .ap-idle .aria-avatar:has(img:not([style*='display: none'])) .avatar-fallback {
+  display: none;
+}
+.sw-ai .ap-idle .aria-avatar img {
+  filter: drop-shadow(0 9px 8px #8558ba22);
+}
+.sw-ai .ap-idle .ap-heading > div {
+  flex-basis: auto;
+  width: 100%;
+}
+.sw-ai .ap-idle .ap-eyebrow {
+  font-size: 9px;
+  color: #a286b7;
+  letter-spacing: 1.2px;
+}
+.sw-ai .ap-idle .ap-heading h2 {
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.4px;
+  color: #71518a;
+  margin: 7px auto 0;
+  max-width: 290px;
+}
+.sw-ai .ap-idle > p {
+  max-width: 325px;
+  text-align: center;
+  margin: 12px auto 24px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #9680a5;
+}
+.sw-ai .ap-idle .ap-instructions {
+  margin: 0;
+  border: 1px solid #e8def1;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 12px;
+}
+.sw-ai .ap-idle .ap-instructions summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none;
+  padding: 12px 0;
+  font-size: 12px;
+  color: #8c729e;
+}
+.sw-ai .ap-idle .ap-instructions summary::after {
+  content: '+';
+  font-size: 17px;
+  color: #a387b8;
+  margin-left: 9px;
+  line-height: 1;
+}
+.sw-ai .ap-idle .ap-instructions[open] summary::after {
+  content: '−';
+}
+.sw-ai .ap-idle .ap-instructions summary span {
+  margin-left: auto;
+  font-size: 10.5px;
+}
+.sw-ai .ap-idle .ap-instructions textarea {
+  margin: 0 0 12px;
+  min-height: 90px;
+  font-size: 12px;
+}
+.sw-ai .ap-idle .sw-start-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 14px;
+  border: 0;
+  padding: 0;
+}
+.sw-ai .ap-idle .sw-start-row .ap-start {
+  width: 100%;
+  min-height: 43px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  justify-content: center;
+  background: #6236dd;
+  border-color: #6236dd;
+  box-shadow: 0 4px 12px #6236dd25;
+  color: #fff;
+  font-weight: 600;
+  margin: 0;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 200ms ease;
+}
+.sw-ai .ap-idle .sw-start-row .ap-start:hover,
+.sw-ai .ap-idle .sw-start-row .ap-start:focus-visible {
+  background: #542bc8;
+  border-color: #542bc8;
+  box-shadow: 0 7px 20px #6236dd40;
+}
+.sw-ai .ap-idle .sw-start-row .ap-start:focus-visible {
+  outline: 2px solid #aa8af3;
+  outline-offset: 3px;
+}
+.sw-ai .ap-idle .sw-start-row .ap-start:active {
+  background: #4922b8;
+  box-shadow: 0 2px 6px #6236dd30;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw-ai .ap-idle .sw-start-row .ap-start {
+    transition: none;
+  }
+}
+.sw-ai .ap-idle .sw-start-row > span {
+  text-align: center;
+  font-size: 10.5px;
+  color: #ac96bc;
+}
+.sw-ai .ap-idle .ap-preserved {
+  display: flex;
+  justify-content: center;
+}
+.sw-ai .ap-task > summary {
+  flex-wrap: wrap;
+}
+.sw-ai .ap-task > summary > span:nth-of-type(1) {
+  overflow-wrap: anywhere;
+}
+.sw-ai .ap-task > summary > small {
+  font-size: 10px;
+}
+.sw-ai .ap-actions {
+  gap: 8px;
+}
+.sw-ai .ap-actions .button {
+  font-size: 12px;
+}
+@media (max-width: 1100px) and (min-width: 851px) {
+  .sw-panel-heading {
+    padding: 10px 16px;
+  }
+  .sw-panel-heading small {
+    font-size: 10px;
+  }
+  .sw-issue-scroll .cc-integrated-header {
+    padding: 18px;
+  }
+  .sw-issue-content {
+    padding: 18px;
+  }
+  .sw-issue-scroll .cc-header-properties {
+    gap: 10px 14px;
+  }
+  .sw-ai-scroll {
+    padding: 14px;
+  }
+  .sw-ai .ap-panel {
+    padding: 14px;
+  }
+  .sw-ai .ap-idle {
+    padding: 30px 20px 24px;
+  }
+  .sw-ai .ap-idle .ap-heading h2 {
+    font-size: 21px;
+  }
+  .sw-ai .ap-question {
+    display: block;
+  }
+  .sw-ai .ap-question > svg {
+    margin-bottom: 8px;
+  }
+}
+@media (max-width: 850px) {
+  .sw-issue-scroll .cc-integrated-header {
+    padding: 18px 16px;
+  }
+  .sw-issue-scroll .cc-integrated-header h1 {
+    font-size: 22px;
+  }
+  .sw-issue-scroll .cc-header-properties {
+    gap: 10px;
+  }
+  .sw-issue-scroll .cc-header-properties > label {
+    min-width: 0;
+  }
+  .sw-issue-content {
+    padding: 18px 16px;
+  }
+  .sw-ai .ap-idle {
+    padding: 30px 20px 24px;
+  }
+  .sw-ai .ap-idle .ap-heading h2 {
+    font-size: 22px;
+  }
+}
+.sw-issue-scroll .cc-header-properties {
+  border-radius: 0;
+}
+.sw-ai .ap-idle .sw-start-row .ap-start {
+  order: 0;
+}
+.sw-issue-scroll .cc-detail-kicker > span {
+  color: #a28aae;
+  font-size: 10px;
+  letter-spacing: 0.7px;
+  font-weight: 500;
+}
+
+/* Keep issue context compact and let Aria fill the available pane. */
+.sw-issue-scroll .cc-detail-kicker {
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sw-issue-scroll .cc-detail-kicker .text-button {
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.sw-issue-scroll .cc-description-section {
+  margin-top: 10px;
+}
+.sw-issue-scroll .cc-header-properties {
+  margin-top: 14px;
+  padding-top: 12px;
+}
+.sw-ai .ap-idle {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 0;
+}
+.sw-ai .ap-idle > * {
+  flex-shrink: 0;
+}
+.sw-ai .ap-idle .ap-heading {
+  margin-top: auto;
+}
+.sw-ai .ap-idle > p {
+  margin-bottom: 28px;
+}
+.sw-ai .ap-idle .ap-instructions {
+  margin-top: auto;
+}
+.sw-ai .ap-idle .sw-start-row {
+  flex-shrink: 0;
+}
+
+.cc-header-summary,
+.cc-header-metadata {
+  display: contents;
+}
+/* Issue content first, then one compact properties row. */
+.sw-issue-scroll .cc-integrated-header {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sw-issue-scroll .cc-header-summary {
+  display: block;
+  min-width: 0;
+  width: 100%;
+}
+.sw-issue-scroll .cc-header-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid #eee7f4;
+}
+.sw-issue-scroll .cc-header-metadata .cc-header-properties {
+  order: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.sw-issue-scroll .cc-header-metadata .cc-detail-byline {
+  order: 1;
+  margin: 0;
+  gap: 7px 10px;
+}
+.sw-issue-scroll .cc-header-summary .cc-organize-line {
+  margin-top: 12px;
+}
+.sw-task-subtasks {
+  padding-left: 18px;
+  margin: 8px 0 0;
+  color: #806a90;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.sw-task-subtasks li + li {
+  margin-top: 6px;
+}
+.sw-task summary > small {
+  margin-left: auto;
+  white-space: nowrap;
+  color: #9a86a8;
+  font-size: 11px;
+}
+.sw-execution {
+  margin: 16px 0;
+}
+.sw-execution-task {
+  border: 1px solid #e9e0f2;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.sw-execution-task.is-active {
+  border-color: #c9afee;
+  background: #faf6ff;
+}
+.sw-execution-task summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px;
+  cursor: pointer;
+  list-style: none;
+  color: #7c5c97;
+}
+.sw-execution-task summary::-webkit-details-marker {
+  display: none;
+}
+.sw-execution-task summary > svg {
+  flex-shrink: 0;
+}
+.sw-execution-task summary strong {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+.sw-execution-task small {
+  font-size: 10.5px;
+  white-space: nowrap;
+  color: #967da6;
+}
+.sw-execution-task ul {
+  margin: 0;
+  padding: 0 12px 10px 36px;
+  list-style: none;
+}
+.sw-execution-task li {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 7px 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #887295;
+}
+.sw-execution-task p {
+  padding: 0 12px 12px;
+  font-size: 12px;
+}
+.sw-execution-spinner {
+  animation: sw-execution-spin 1.3s linear infinite;
+}
+@keyframes sw-execution-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sw-execution-spinner {
+    animation: none;
+  }
+}
+/* Preserve the original comparison layout around the shared header groups. */
+.cc-issue-page:not(.sw-page) .cc-header-summary > h1,
+.cc-issue-page:not(.sw-page) .cc-header-summary > .cc-edit-title-label {
+  grid-column: 1;
+  grid-row: 2;
+}
+.cc-issue-page:not(.sw-page) .cc-header-summary > .cc-organize-line {
+  grid-row: 5;
+}
+
+/* Review a run without losing the issue list or board. */
+.cc-create-drawer.cc-aria-review-drawer {
+  width: min(600px, 100vw);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cc-aria-review-drawer .modal-header {
+  flex-shrink: 0;
+  padding: 20px 22px;
+  gap: 10px;
+}
+.cc-aria-review-drawer .modal-header > div {
+  flex: 1;
+  min-width: 0;
+}
+.cc-aria-review-drawer .modal-header h2 {
+  font-size: 17px;
+}
+.cc-aria-review-drawer .modal-header p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 5px;
+}
+.cc-aria-review-drawer .modal-header .icon-button {
+  flex-shrink: 0;
+}
+.cc-aria-review-content {
+  flex: 1;
+  min-height: 0;
+}
+.cc-fix-button {
+  min-width: 128px;
+}
+@media (max-width: 600px) {
+  .cc-create-drawer.cc-aria-review-drawer {
+    border-radius: 0;
+  }
+  .cc-aria-review-drawer .modal-header {
+    padding: 16px;
+  }
+  .cc-aria-review-content .sw-ai-scroll {
+    padding: 14px;
+  }
+}
+
+.cc-auto-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #897297;
+  white-space: nowrap;
+}
+.cc-auto-mode input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.cc-auto-track {
+  width: 30px;
+  height: 18px;
+  border-radius: 20px;
+  background: #ded5e8;
+  padding: 3px;
+  transition: background 180ms;
+}
+.cc-auto-track i {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px #40275f26;
+  transition: transform 180ms;
+}
+.cc-auto-mode.is-on {
+  color: #7246b4;
+}
+.cc-auto-mode.is-on .cc-auto-track {
+  background: #7346d8;
+}
+.cc-auto-mode.is-on .cc-auto-track i {
+  transform: translateX(12px);
+}
+.cc-auto-mode:has(input:focus-visible) {
+  outline: 2px solid #aa8af3;
+  outline-offset: 5px;
+  border-radius: 4px;
+}
+.ap-idle > .cc-auto-mode {
+  align-self: center;
+  margin: 0 0 14px;
+}
+.cc-auto-run-label {
+  color: #8664a1;
+  font-size: 11px;
+  margin: 10px 0 14px;
+}
+.cc-editable-priority {
+  position: relative;
+  cursor: pointer;
+  gap: 6px;
+}
+.cc-editable-priority select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0 25px 0 28px;
+  font: inherit;
+  border-radius: inherit;
+}
+.cc-editable-priority {
+  min-width: 112px;
+}
+.cc-editable-priority > svg {
+  margin-left: auto;
+}
+.cc-editable-priority:focus-within {
+  outline: 2px solid #b89be2;
+  outline-offset: 2px;
+}
+.cc-editable-priority select:focus {
+  outline: 0;
+  box-shadow: none;
+}
+.cc-editable-priority option {
+  background: white;
+  color: #493954;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-auto-track,
+  .cc-auto-track i {
+    transition: none;
+  }
+}
+
+.aria-avatar.aria-playful {
+  cursor: pointer;
+  position: relative;
+  overflow: visible;
+  outline: none;
+}
+.aria-playful:focus-visible {
+  outline: 2px solid #a580e9;
+  outline-offset: 16px;
+  border-radius: 50%;
+}
+.aria-playful.is-loved::before {
+  border-color: #d0b6f4;
+  box-shadow:
+    0 0 0 12px #e9d5fb55,
+    0 0 35px #c9a5ef66;
+}
+
+.cc-issues-refresh .cc-editable-priority {
+  width: 96px;
+  min-width: 96px;
+  padding-inline: 8px;
+}
+.cc-issues-refresh .cc-editable-priority select {
+  padding: 0 20px 0 23px;
+  padding-right: 20px !important; /* Override the shared select arrow spacing. */
+  background-image: none;
+}
+
+/* New issue and Aria review are full-height, edge-aligned sidebars. */
+.modal-backdrop.cc-drawer-backdrop {
+  padding: 0;
+}
+.modal.cc-create-drawer {
+  height: 100dvh;
+  max-height: 100dvh;
+  max-width: 100%;
+  border: 0;
+  border-left: 1px solid #e7ddee;
+  border-radius: 0;
+  overflow: hidden;
+}
+@media (max-width: 600px) {
+  .modal.cc-create-drawer {
+    width: 100%;
+    border: 0;
+  }
+}
