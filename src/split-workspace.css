@@ -1302,6 +1302,32 @@
 }
 
 .cc-issues-refresh .cc-editable-priority {
-  width: 112px;
-  min-width: 112px;
+  width: 96px;
+  min-width: 96px;
+  padding-inline: 8px;
+}
+.cc-issues-refresh .cc-editable-priority select {
+  padding: 0 20px 0 23px;
+  padding-right: 20px !important; /* Override the shared select arrow spacing. */
+  background-image: none;
+}
+
+/* New issue and Aria review are full-height, edge-aligned sidebars. */
+.modal-backdrop.cc-drawer-backdrop {
+  padding: 0;
+}
+.modal.cc-create-drawer {
+  height: 100dvh;
+  max-height: 100dvh;
+  max-width: 100%;
+  border: 0;
+  border-left: 1px solid #e7ddee;
+  border-radius: 0;
+  overflow: hidden;
+}
+@media (max-width: 600px) {
+  .modal.cc-create-drawer {
+    width: 100%;
+    border: 0;
+  }
 }
