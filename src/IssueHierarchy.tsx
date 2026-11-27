@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { gsap } from 'gsap';
 import { CheckCircle2, ChevronDown, Circle, GitBranch, Plus, Sparkles } from 'lucide-react';
 import type { Issue, Status, WorkType } from './data';
-import { labelsOf, parentError, secondaryStatus } from './issueModel';
+import { workTypeOf, parentError, secondaryStatus } from './issueModel';
 import { AriaAction } from './AriaAction';
 
 export function useIssueMotion<T extends HTMLElement = HTMLDivElement>(key: unknown) {
@@ -70,7 +70,7 @@ export function ExpandRegion({
   );
 }
 export function IssueLabels({ issue }: { issue: Issue }) {
-  const labels = labelsOf(issue);
+  const labels = [workTypeOf(issue)];
   const ref = useIssueMotion(labels.join(','));
   return (
     <div ref={ref} className="cc-labels">

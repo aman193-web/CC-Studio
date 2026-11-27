@@ -22,7 +22,7 @@ export function IssueContext({
   issue: Issue;
   onChange: (changes: Partial<Issue>) => void;
 }) {
-  const [tab, setTab] = useState('Activity');
+  const [tab, setTab] = useState('Tasks');
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
   const upload = useRef<HTMLInputElement>(null);
@@ -119,7 +119,9 @@ export function IssueContext({
                 <p>
                   <strong>
                     {issue.run.phase === 'completed'
-                      ? 'Aria completed the tasks'
+                      ? issue.run.mode === 'preview'
+                        ? 'Aria completed the demonstration tasks'
+                        : 'Aria completed the tasks'
                       : issue.run.phase === 'executing'
                         ? 'Aria is working through the approved plan'
                         : issue.run.phase === 'plan'

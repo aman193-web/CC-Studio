@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
 import { gsap } from 'gsap';
 import { IssueBoard } from './IssueBoard';
 import { IssueContext, IssueBranch } from './IssueContext';
@@ -31,9 +30,9 @@ import {
   UserCircle,
   X,
 } from 'lucide-react';
-import { AriaAvatar, AriaWorkspace, IssueActionView } from './AriaWorkflow';
-import { initialIssues, phaseLabels, statuses, taskPlan } from './data';
-import type { Issue, Phase, Priority, Run } from './data';
+import { AriaAvatar, IssueActionView } from './AriaWorkflow';
+import { initialIssues, statuses } from './data';
+import type { Issue, Priority, Run } from './data';
 
 import { CreateIssue } from './CreateIssue';
 import { IssueList } from './IssueList';
@@ -49,15 +48,24 @@ import {
   ancestors,
   hasLabel,
   migrateIssues,
-  planningContext,
   workTypeOf,
   workTypeChanges,
   newIssueData,
-  reconcileApprovedWork,
   searchIssue,
-  uid,
   validateIssue,
 } from './issueModel';
+import { AriaPlanPanel } from './AriaPlanPanel';
+import type { AriaControls } from './AriaPlanPanel';
+import { IssueDetailsWorkspace } from './IssueDetailsWorkspace';
+import type { WorkspacePreference } from './ariaTypes';
+import {
+  beginDemo,
+  tickDemo,
+  approveDemo,
+  approvalError,
+  answerDemo,
+  controlDemo,
+} from './ariaDemo';
 const seed = () => {
   const base = initialIssues.map((i) => ({
     ...i,
@@ -90,7 +98,12 @@ const seed = () => {
     story,
     auth,
     login,
-  ]);
+  ]).map((issue) => ({
+    ...issue,
+    run: undefined,
+    runHistory: issue.run ? [...(issue.runHistory || []), issue.run] : issue.runHistory,
+    legacyStatus: undefined,
+  }));
 };
 const cx = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(' ');
 function Source({ source }: { source: Issue['source'] }) {
@@ -146,21 +159,19 @@ export default function App() {
     };
   }, []);
   const [issues, setIssues] = useState<Issue[]>(seed);
-  const [issueView, setIssueView] = useState<'list' | 'board'>(() => {
-    try {
-      return localStorage.getItem('cc-studio-issue-view') === 'board' ? 'board' : 'list';
-    } catch {
-      return 'list';
-    }
-  });
+  const [workspacePreferences, setWorkspacePreferences] = useState<
+    Record<number, WorkspacePreference>
+  >({});
+  const preferenceFor = (id: number): WorkspacePreference =>
+    workspacePreferences[id] || { collapsed: true, explicit: false, ratio: 60 };
+  const revealActivity = (id: number) =>
+    setWorkspacePreferences((prev) => {
+      const p = prev[id] || { collapsed: true, explicit: false, ratio: 60 };
+      return p.explicit ? prev : { ...prev, [id]: { ...p, collapsed: false } };
+    });
+
+  const [issueView, setIssueView] = useState<'list' | 'board'>('list');
   const issuesRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    try {
-      localStorage.setItem('cc-studio-issue-view', issueView);
-    } catch {
-      /* View remains available for the session. */
-    }
-  }, [issueView]);
   useLayoutEffect(() => {
     if (tab !== 'Issues' || !issuesRef.current) return;
     const mm = gsap.matchMedia();
@@ -234,6 +245,10 @@ export default function App() {
   const openAria = (id: number) => {
     if (selectedId !== id) openIssue(id);
     setFixId(null);
+    const target = issues.find((i) => i.id === id);
+    if (target && target.status !== 'Completed' && (!target.run || target.run.phase === 'idle'))
+      start(id, '');
+    else revealActivity(id);
     requestAnimationFrame(() => {
       document
         .getElementById('issue-aria-workflow')
@@ -254,6 +269,20 @@ export default function App() {
   const update = (id: number, changes: Partial<Issue>) => {
     const original = issues.find((i) => i.id === id);
     if (!original) return;
+    const scopeLocked = issues.some(
+      (i) =>
+        ['executing', 'blocked'].includes(i.run?.phase || '') &&
+        (i.id === id || i.run?.scope?.some((item) => item.issueId === id)),
+    );
+    if (
+      scopeLocked &&
+      ['title', 'description', 'labels', 'label', 'parentIssueId', 'workItems'].some(
+        (key) => key in changes,
+      )
+    ) {
+      setNotice('Stop the active execution before changing its approved scope.');
+      return;
+    }
     const candidate = { ...original, ...changes, updatedAt: new Date().toISOString() };
     const error = validateIssue(candidate, issues);
     if (error) {
@@ -292,59 +321,7 @@ export default function App() {
     return () => document.removeEventListener('keydown', handler);
   }, [createOpen, selectedId, fixId, ticketId]);
   useEffect(() => {
-    const timer = setInterval(() => {
-      setIssues((prev) => {
-        let changed = false;
-        const next = prev.map((i) => {
-          if (!i.run?.startedAt) return i;
-          const elapsed = Date.now() - i.run.startedAt;
-          if (i.run.phase === 'analyzing' && elapsed > 2200) {
-            changed = true;
-            return { ...i, run: { ...i.run, phase: 'plan' as Phase, startedAt: undefined } };
-          }
-          if (i.run.phase === 'executing') {
-            const count = i.run.tasks.filter((t) => t.enabled).length;
-            const step = Math.min(count, Math.floor(elapsed / 2000));
-            if (step !== i.run.step) {
-              changed = true;
-              return {
-                ...i,
-                status: step === count ? ('Completed' as const) : ('AI Working' as const),
-                workItems: (i.workItems || []).map((work) => {
-                  const taskIndex = i
-                    .run!.tasks.filter((t) => t.enabled)
-                    .findIndex((t) => t.workItemId === work.id);
-                  if (taskIndex < 0 || work.status === 'Completed') return work;
-                  const status =
-                    taskIndex < step
-                      ? ('Completed' as const)
-                      : taskIndex === step
-                        ? ('AI Working' as const)
-                        : ('To Do' as const);
-                  return {
-                    ...work,
-                    status,
-                    updatedAt: new Date().toISOString(),
-                    subtasks: work.subtasks.map((sub) =>
-                      sub.status === 'Completed' ? sub : { ...sub, status },
-                    ),
-                  };
-                }),
-                run: {
-                  ...i.run,
-                  verified: step === count,
-                  step,
-                  phase: step === count ? ('completed' as Phase) : ('executing' as Phase),
-                  startedAt: step === count ? undefined : i.run.startedAt,
-                },
-              };
-            }
-          }
-          return i;
-        });
-        return changed ? next : prev;
-      });
-    }, 500);
+    const timer = setInterval(() => setIssues((prev) => tickDemo(prev)), 300);
     return () => clearInterval(timer);
   }, []);
   const filtered = useMemo(
@@ -357,82 +334,61 @@ export default function App() {
       ),
     [issues, status, query, typeFilter],
   );
-  const makeRun = (issue: Issue, instructions: string): Run => {
-    const work = issue.workItems || [];
-    const hasChildren = issues.some((i) => i.parentIssueId === issue.id);
-    return {
-      id: uid(),
-      planId: uid(),
-      phase: 'analyzing',
-      planningContext: planningContext(issue, issues),
-      instructions,
-      mode: 'preview',
-      step: 0,
-      startedAt: Date.now(),
-      tasks: work.length
-        ? work
-            .filter((w) => w.status !== 'Completed')
-            .map((w, index) => ({
-              id: index + 1,
-              workItemId: w.id,
-              title: w.title,
-              detail: w.description,
-              subtasks: w.subtasks.map((s) => s.title),
-              agent: 'Aria',
-              enabled: true,
-            }))
-        : hasChildren
-          ? []
-          : taskPlan(issue.title),
-    };
+  const start = (id: number, instructions = '') => {
+    revealActivity(id);
+    setIssues((prev) =>
+      prev.map((issue) => {
+        if (
+          issue.id !== id ||
+          (['analyzing', 'clarification', 'plan', 'executing', 'blocked'].includes(
+            issue.run?.phase || '',
+          ) &&
+            !issue.run?.scopeChanged)
+        )
+          return issue;
+        return {
+          ...issue,
+          run: beginDemo(issue, prev, instructions, issue.run),
+          runHistory: issue.run ? [...(issue.runHistory || []), issue.run] : issue.runHistory,
+        };
+      }),
+    );
   };
-  const start = (id: number, instructions: string) => {
-    const issue = issues.find((i) => i.id === id)!;
-    const run = makeRun(issue, instructions);
-    update(id, {
-      run,
-      draftPlanId: run.planId,
-      runHistory: issue.run ? [...(issue.runHistory || []), issue.run] : issue.runHistory,
-    });
+  const revise = (id: number, instructions: string) => {
+    revealActivity(id);
+    setIssues((prev) =>
+      prev.map((issue) =>
+        issue.id === id && issue.run?.phase === 'plan'
+          ? {
+              ...issue,
+              run: beginDemo(
+                issue,
+                prev,
+                [issue.run.instructions, instructions].filter(Boolean).join('\n'),
+                issue.run,
+              ),
+              runHistory: [...(issue.runHistory || []), issue.run],
+            }
+          : issue,
+      ),
+    );
   };
   const approve = (id: number) => {
-    const issue = issues.find((i) => i.id === id)!;
-    if (!issue.run || issue.run.phase !== 'plan' || !issue.run.tasks.some((t) => t.enabled)) return;
-    let run: Run = {
-      ...issue.run,
-      phase: 'executing',
-      approvedAt: new Date().toISOString(),
-      step: 0,
-      startedAt: Date.now(),
-    };
-    const workItems = reconcileApprovedWork(issue, run);
-    run = {
-      ...run,
-      tasks: run.tasks.map((t) => ({
-        ...t,
-        workItemId:
-          t.workItemId ||
-          workItems.find((w) => w.planId === run.planId && w.id.endsWith(`-task-${t.id}`))?.id,
-      })),
-    };
-    const first = run.tasks.find((t) => t.enabled)?.workItemId;
-    update(id, {
-      status: 'AI Working',
-      approvedPlanId: run.planId,
-      draftPlanId: undefined,
-      run,
-      workItems: workItems.map((w) => ({
-        ...w,
-        runId: run.tasks.some((t) => t.workItemId === w.id) ? run.id : w.runId,
-        status: w.id === first && w.status !== 'Completed' ? 'AI Working' : w.status,
-      })),
-    });
+    const issue = issues.find((i) => i.id === id);
+    if (!issue) return;
+    const error = approvalError(issue, issues);
+    if (error) {
+      setNotice(error);
+      return;
+    }
+    setIssues((prev) => approveDemo(prev, id));
   };
   const create = (draft: Issue, plan: boolean) => {
     const id = Math.max(...issues.map((i) => i.id), 0) + 1;
     const issue = { ...draft, id };
     if (plan) {
-      issue.run = makeRun(issue, '');
+      issue.run = beginDemo(issue, issues);
+      revealActivity(id);
       issue.draftPlanId = issue.run.planId;
     }
     setIssues((prev) => [issue, ...prev]);
@@ -505,14 +461,11 @@ export default function App() {
         <p>{ticket.description}</p>
         <div className="cc-ticket-preview-meta">
           <Source source={ticket.source} />
-          <span className={cx('cc-status', ticket.status.toLowerCase().replaceAll(' ', '-'))}>
-            <StatusBadge issue={ticket} />
-            {ticket.status}
-          </span>
+          <StatusBadge issue={ticket} />
         </div>
         <div className="cc-ticket-url">
           <ExternalLink size={15} />
-          <code>gitlab.com/your-workspace/realtime-dashboard/-/issues/{ticket.id}</code>
+          <span>The repository ticket URL is not available for this issue.</span>
         </div>
       </div>
       <div className="modal-footer">
@@ -785,24 +738,23 @@ export default function App() {
                 onAssociate={(id, parentIssueId) => update(id, { parentIssueId })}
                 onClose={backToIssues}
                 onChange={(c) => update(selected.id, c)}
-                ariaWorkflow={
-                  <AriaWorkspace
-                    key={selected.id}
-                    issue={selected}
-                    onClose={backToIssues}
-                    onStart={(instructions) => start(selected.id, instructions)}
-                    onRunUpdate={(changes) => updateRun(selected.id, changes)}
-                    onApprove={() => approve(selected.id)}
-                    onDone={() => {
-                      if (!selected.run?.verified) {
-                        setNotice('Verification is required before completion.');
-                        return;
-                      }
-                      update(selected.id, { status: 'Completed' });
-                      setNotice('Issue completed');
-                    }}
-                  />
+                preference={preferenceFor(selected.id)}
+                onPreference={(p) =>
+                  setWorkspacePreferences((prev) => ({ ...prev, [selected.id]: p }))
                 }
+                ariaControls={{
+                  start: (instructions) => start(selected.id, instructions),
+                  update: (changes) => updateRun(selected.id, changes),
+                  approve: () => approve(selected.id),
+                  revise: (text) => revise(selected.id, text),
+                  answer: (text) =>
+                    setIssues((prev) =>
+                      prev.map((i) =>
+                        i.id === selected.id ? { ...i, run: answerDemo(i, text, prev) } : i,
+                      ),
+                    ),
+                  control: (action) => setIssues((prev) => controlDemo(prev, selected.id, action)),
+                }}
                 onTicket={() => openTicket(selected.id)}
               />
             ) : (
@@ -993,7 +945,9 @@ function IssueDetails({
   onAssociate,
   onClose,
   onChange,
-  ariaWorkflow,
+  ariaControls,
+  preference,
+  onPreference,
   onTicket,
 }: {
   issue: Issue;
@@ -1004,7 +958,9 @@ function IssueDetails({
   onAssociate: (id: number, parentId: number | null) => void;
   onClose: () => void;
   onChange: (changes: Partial<Issue>) => void;
-  ariaWorkflow: ReactNode;
+  ariaControls: AriaControls;
+  preference: WorkspacePreference;
+  onPreference: (p: WorkspacePreference) => void;
   onTicket: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -1120,84 +1076,62 @@ function IssueDetails({
           </div>
         )}
       </header>
-      <div ref={detailMotion} className="cc-issue-page-grid">
-        <div className="cc-issue-page-content">
-          <section className="cc-description-section">
-            <div className="cc-section-heading">
-              <h2>Description</h2>
-              {!editing ? (
-                <button className="text-button" onClick={() => setEditing(true)}>
-                  <Pencil size={13} />
-                  Edit issue
-                </button>
-              ) : (
-                <div className="cc-edit-actions">
-                  <button
-                    className="button"
-                    onClick={() => {
-                      setTitle(issue.title);
-                      setDescription(issue.description);
-                      setEditing(false);
-                    }}
-                  >
-                    Cancel
+      <IssueDetailsWorkspace issue={issue} preference={preference} onPreference={onPreference}>
+        <div ref={detailMotion} className="cc-issue-page-grid">
+          <div className="cc-issue-page-content">
+            <section className="cc-description-section">
+              <div className="cc-section-heading">
+                <h2>Description</h2>
+                {!editing ? (
+                  <button className="text-button" onClick={() => setEditing(true)}>
+                    <Pencil size={13} />
+                    Edit issue
                   </button>
-                  <button className="button primary" disabled={!title.trim()} onClick={save}>
-                    Save changes
-                  </button>
-                </div>
-              )}
-            </div>
-            {editing ? (
-              <textarea
-                aria-label="Issue description"
-                rows={8}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            ) : (
-              <p>
-                {issue.description ||
-                  'No description added yet. Add context to help your team get started.'}
-              </p>
-            )}
-          </section>
-          <ChildIssues
-            issue={issue}
-            issues={issues}
-            onOpen={onOpen}
-            onFix={onFix}
-            onCreate={onCreateChild}
-            onAssociate={onAssociate}
-          />
-          <section className="cc-page-aria">
-            <div className="cc-aria-section-mascot">
-              <AriaAvatar />
-            </div>
-            <div className="cc-page-aria-heading">
-              <div>
-                <span className="cc-section-eyebrow">YOUR CODING TEAMMATE</span>
-                <h2>
-                  {issue.status === 'Completed'
-                    ? 'This issue is complete'
-                    : issue.run
-                      ? phaseLabels[issue.run.phase]
-                      : 'Let Aria take it from here'}
-                </h2>
+                ) : (
+                  <div className="cc-edit-actions">
+                    <button
+                      className="button"
+                      onClick={() => {
+                        setTitle(issue.title);
+                        setDescription(issue.description);
+                        setEditing(false);
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button className="button primary" disabled={!title.trim()} onClick={save}>
+                      Save changes
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
-            <p>
-              {issue.status === 'Completed'
-                ? 'The required work has been completed. Its tasks and history remain available below.'
-                : issue.run
-                  ? 'Review the proposed tasks or follow Aria’s progress on this issue.'
-                  : 'Aria turns this issue into a clear plan, then handles the code. You review and approve before execution starts.'}
-            </p>
-            {ariaWorkflow}
-          </section>
-          <IssueContext issue={issue} onChange={onChange} />
+              {editing ? (
+                <textarea
+                  aria-label="Issue description"
+                  rows={8}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
+              ) : (
+                <p>
+                  {issue.description ||
+                    'No description added yet. Add context to help your team get started.'}
+                </p>
+              )}
+            </section>
+            <AriaPlanPanel issue={issue} controls={ariaControls} />
+            <ChildIssues
+              issue={issue}
+              issues={issues}
+              onOpen={onOpen}
+              onFix={onFix}
+              onCreate={onCreateChild}
+              onAssociate={onAssociate}
+            />
+            <IssueContext issue={issue} onChange={onChange} />
+          </div>
         </div>
-      </div>
+      </IssueDetailsWorkspace>
     </section>
   );
 }

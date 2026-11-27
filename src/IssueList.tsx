@@ -1,8 +1,8 @@
 import { Fragment, useMemo, useState } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Sparkles } from 'lucide-react';
 import type { Issue } from './data';
-import { ancestors, association, workTypeOf, secondaryStatus } from './issueModel';
-import { SecondaryBadge, StatusBadge, useIssueMotion } from './IssueHierarchy';
+import { ancestors, association, workTypeOf } from './issueModel';
+import { StatusBadge, useIssueMotion } from './IssueHierarchy';
 import { AriaAction } from './AriaAction';
 export function IssueList({
   issues,
@@ -115,7 +115,6 @@ export function IssueList({
           </td>
           <td>
             <StatusBadge issue={issue} />
-            {secondaryStatus(issue) !== 'Awaiting verification' && <SecondaryBadge issue={issue} />}
           </td>
           <td>
             <span className={`cc-type ${workTypeOf(issue).toLowerCase()}`}>

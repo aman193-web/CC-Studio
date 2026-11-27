@@ -39,3 +39,13 @@ The issue table now shows Type (Issue / Story / Epic) derived from work type, ra
 Latest UI refinement: table has a dedicated Priority column with compact tinted High/Medium/Low pills; Awaiting verification is hidden in table rows. Toolbar is search plus Type, with status tabs; source, Epic, Story, label, and grouping controls are removed. Detail status badges have rounded corners and balanced padding. Issue data now lives in React state and resets to initial examples on browser reload, per user request; old stored issue data is left untouched and is no longer loaded or written. This supersedes earlier persistence and filter descriptions.
 
 UI consistency pass: shared Issues polish styles in `src/issue-polish.css` normalize small metadata text, badge sizes, table alignment, board spacing, detail property heights, and drawer gutters/radio controls. Verified list, board, details and drawer at 390, 768 and 1440 px without document overflow or runtime errors. Portal shell and frozen v1 remain unchanged.
+
+## Batch 2 — inline Aria workspace
+
+The refined pre-Batch-2 version is preserved at `c89c750` on `snapshots/pre-batch2-2026-11-27`.
+
+Replaced the five-step wizard with direct planning and a compact two-panel Issue Details workspace. Added type-aware demonstration plans, proposed Stories/tasks/subtasks, clarification, scoped approval, task preservation, revision history, blockers/retry/stop, partial-run continuation and contextual result actions. The read-only activity feed supports grouped details, user-controlled auto-follow, resizing, collapse, mobile tabs and session-only state. Only Issue / Story / Epic appear as classifications. No assignees or removed filters were restored.
+
+Execution is explicitly demonstrated, with no live Aria/repository backend. Code changes are shown only when actual artifact URLs are supplied. Full browser refresh resets to the initial data. V1 remains unchanged.
+
+- Issue Details keeps its title, metadata and properties in a full-width header above the two-panel workspace. The idle Aria card uses a compact introduction with its action aligned right and expandable instructions below.

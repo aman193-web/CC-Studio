@@ -33,3 +33,14 @@ The issue table now shows Type (Issue / Story / Epic) derived from work type, ra
 Latest UI refinement: table has a dedicated Priority column with compact tinted High/Medium/Low pills; Awaiting verification is hidden in table rows. Toolbar is search plus Type, with status tabs; source, Epic, Story, label, and grouping controls are removed. Detail status badges have rounded corners and balanced padding. Issue data now lives in React state and resets to initial examples on browser reload, per user request; old stored issue data is left untouched and is no longer loaded or written. This supersedes earlier persistence and filter descriptions.
 
 - Aria is the sole executor: remove all assignee controls and assignment text from issue creation, details, and tasks. This supersedes the Batch 1 assignment UI rule. Retain legacy assignment data internally for compatibility.
+
+## Batch 2 (supersedes earlier conflicting implementation notes)
+- Keep Issue / Story / Epic as the only visible work classifications everywhere. Preserve legacy metadata internally.
+- Planning, clarification, approval, progress and results live in Issue Details. No stepper or separate execution page.
+- `ariaDemo.ts` is a clearly labeled, isolated demonstration adapter. Do not imply live AI, repository inspection, tests or commits. Production events must remain separate.
+- Draft work is created only on approval. Preserve IDs and completed work, reject stale/overlapping approvals, and retain excluded scope for continuation.
+- The 60:40 workspace has a resizable, collapsible, read-only activity panel, independent scrolling, mobile tabs and session-only preferences. Never add a chat composer.
+- Browser refresh resets all prototype state; do not restore persistent browser storage.
+- Pre-Batch-2 refinement is preserved at `c89c750` on `snapshots/pre-batch2-2026-11-27`. Work continues on `design/next-two-batches`.
+
+- Issue Details keeps its title, metadata and properties in a full-width header above the two-panel workspace. The idle Aria card uses a compact introduction with its action aligned right and expandable instructions below.

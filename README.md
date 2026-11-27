@@ -1,8 +1,8 @@
-# CC Studio — Issues workspace
+# CC Studio — Aria Issues workspace
 
-The active React/Vite application preserves the supplied CC Studio portal shell, Roboto typography, lavender palette, and the full-width Issues tab. This is a local design prototype; it has no GitLab API or production coding-agent backend.
+React, TypeScript, Vite and GSAP design prototype. The original CC Studio shell, Roboto typography, lavender palette and frozen V1 are preserved.
 
-## Run and verify
+## Run
 
 ```sh
 npm install
@@ -12,57 +12,50 @@ npm test
 npm run build
 ```
 
-The model tests use Node's built-in TypeScript stripping (Node 22.18+ or Node 24). Deploy the repository root as Vite, with `npm run build` and output directory `dist`.
+Use Node 22.18+ or Node 24 for the TypeScript model tests. Deploy the repository root as Vite (`npm run build`, output `dist`).
 
-## Batch 1
+## Current interface
 
-- Epic, Story, Task, Bug, Feature, Improvement, Enhancement, and Design labels all use the same Issue model and detail page. Unknown existing labels are preserved. Epic and Story are mutually exclusive.
-- `parentIssueId` is the only hierarchy relationship. Epic membership is derived from ancestors; cycles, self-parenting, invalid Story/Epic links, and cross-project links are rejected.
-- Shared Epic, Story, label, source, status, and search filters serve List and Board. Search includes descriptions and ancestor names. List can group by Epic or Story with nested expandable rows, counts, and completion progress. Flat pagination survives detail navigation; grouped pagination keeps complete groups together.
-- Board has only **To Do**, **AI Working**, and **Completed**. Status is read-only on cards and issue details. Dragging cannot invent an execution or verified completion. Clarification, planning, approval, and unverified legacy runs use secondary indicators.
-- One right drawer offers a single Issue / Story / Epic work-type choice, priority, and preserved assignment information. Parent context is inherited when creating a child; no hierarchy selectors or label checklist are shown. **Create Issue** saves only. **Create & Plan with Aria** starts analysis without approving or executing.
-- Issue details provide clickable ancestry, a compact work-type editor, child creation/linking/reassignment, and independent implementation tasks and subtasks. Existing assignments and completed work remain intact.
-- `workItems` live outside `run.tasks`. Draft plan proposals stay in the run until approval. Stable work-item IDs reconcile approved work without duplicates. Child issues are never automatically copied into implementation tasks.
-- GSAP handles drawer entry/dismissal, hierarchy and subtask expansion, labels, statuses, notices, view transitions, and newly opened issue content. Reduced motion is respected.
+- Unified Issue / Story / Epic classification across list, board, details, creation and plans. Legacy labels remain in the data for compatibility, but are not shown as work classifications.
+- Table columns: Issue, Status, Type, Priority, GitLab ticket, Aria. Search, Type and status are the only filters.
+- Three primary statuses: To Do, AI Working and Completed. Planning and approval do not start execution.
+- Aria is the only executor; no assignment controls.
+- New work uses the existing right-side creation drawer. Issue details remain inside the full-width Issues tab.
+- Issue details have resizable 60:40 panels: implementation on the left and read-only activity on the right. The right panel begins collapsed, opens on planning, respects an explicit collapse preference, and retains history. A keyboard-accessible divider supports arrow-key resizing. Mobile uses two tabs.
+- All issue, task, plan, run, clarification, activity and panel-preference data is session-only React state. Internal navigation preserves it; browser refresh resets to initial examples. No browser persistence is read or written by the active app.
 
-## Persistence and migration
+## Planning and execution
 
-Batch 1 uses **`cc-studio-issues-batch1`**. On first load it reads and migrates `cc-studio-issues-v2` if present, retaining the original key and a `cc-studio-issues-v2-before-batch1` backup. It preserves IDs, content, comments, attachments, assignment, relationships, history, and existing independent work.
+`Fix with Aria` begins planning immediately. The five-step wizard has been removed. Users can review expandable task hierarchies, edit proposed work, include/exclude scope with prerequisites, provide clarification, request a new plan version, and approve execution.
 
-Legacy Done maps to Completed. In-progress/review records become To Do unless a run supplies approved active execution or verification evidence. Previously executed plan tasks become permanent work items; unapproved tasks remain proposals. Migration is idempotent. Fresh sessions include sample Epic/Story relationships; existing sessions retain their existing issues without injecting new sample records.
+Issue plans use focused tasks; Story plans provide broader tasks and subtasks; Epic plans reuse child requirements and can propose new Stories. New work is materialized only on approval using the same Issue model and permanent WorkItems. Stable IDs preserve existing work. Partial approvals retain excluded scope for continuation. Approval is tied to the requirement snapshot, and overlapping execution is rejected. Changing stopped work requires new approval before resuming.
 
-List/Board preference continues using `cc-studio-issue-view`; group preference uses `cc-studio-group-by`.
+The activity feed groups details behind disclosures and retains separate attempts. It follows new activity only when near the bottom, otherwise showing Jump to latest. No chat or composer exists in that panel.
 
-## Aria and repository boundary
+## Demonstration boundary
 
-The existing deterministic Aria preview remains functional. Approved preview runs advance through tasks and record preview verification; they do not execute repository code. Every new run records `mode: 'preview'`. The model includes plan IDs, run IDs/history, work references, dependencies, typed event/artifact slots, and origin metadata for Batch 2. Label-aware generation and the two-panel execution experience are deferred to Batch 2.
+There is no Aria service or repository execution integration in this codebase. `src/ariaDemo.ts` is an isolated deterministic demonstration adapter, not an LLM or production executor. It uses issue text, work type and existing work to produce example plans. It cannot inspect a remote repository, infer real project architecture, run shell commands, modify code, execute tests, or create commits/MRs. Arbitrary natural-language plan revisions require future backend integration; the demo supports targeted instructions such as verification-only scope plus editable draft tasks.
 
-The inherited GitLab connected presentation and in-app sample ticket viewer remain. No real issues, branches, commits, or merge requests are created. Branch UI now displays only an explicitly recorded run branch, rather than constructing a nonexistent branch name.
+All new runs carry `mode: 'preview'` and visible Demo run identification. Timed outcomes belong exclusively to the demo adapter. Completion denotes a simulated result, not real verified code. The collapsed Demonstration behavior control can exercise a verification blocker; Retry preserves completed work, and Stop retains the approved scope. Real execution must consume actual backend events rather than these demo ticks.
 
-## Main files
+Repository artifacts are optional typed records. The Code changes section opens supplied HTTPS artifacts; it never constructs branch names, commit SHAs, merge requests, test results or file counts. The inherited connected GitLab presentation remains; missing ticket URLs show an honest unavailable state.
 
-- `src/data.ts`: unified types, existing sample data and preview task generator.
-- `src/issueModel.ts`: hierarchy validation, migration, search, and work reconciliation.
-- `src/IssueHierarchy.tsx`: shared work-type/label/status controls, child issues and motion helpers.
-- `src/CreateIssue.tsx`: shared creation drawer.
-- `src/IssueList.tsx`, `src/IssueBoard.tsx`: shared-data views.
-- `src/WorkItems.tsx`, `src/IssueContext.tsx`: independent tasks, activity, attachments and comments.
-- `src/App.tsx`, `src/AriaWorkflow.tsx`: retained shell and inline planning/execution.
-- `tests/issue-model.test.mjs`: hierarchy, migration, preservation, and reconciliation checks.
+## Important files
 
-## Verification
-
-Model tests, TypeScript checks, and production build pass. Isolated browser sessions checked creation modes, dependent selectors, mutually exclusive labels, independent task/subtask persistence, parent linking/unlinking, invalid label-change protection, grouped deduplication, search/filter sharing, pagination return state, execution approval/status transitions, preserved assignment, and independent parent status. Desktop and 390 px mobile checks found no horizontal document overflow; reduced-motion and drawer Escape behavior passed. Browser test data was created in isolated contexts, leaving the user's saved issues unchanged.
+- `src/ariaTypes.ts`: plans, groups, tasks, execution references, activity and workspace preference types.
+- `src/ariaDemo.ts`: demo planning, exact approval, reconciliation, execution events, blockers, partial completion and retries.
+- `src/AriaPlanPanel.tsx`: inline clarification, editable plan hierarchy, approvals, progress and results.
+- `src/IssueDetailsWorkspace.tsx`: resizable workspace, independent scrolling and read-only activity.
+- `src/AriaDisclosure.tsx`: native accessible disclosures with GSAP motion.
+- `src/aria-workspace.css`: compact two-panel layout and responsive design.
+- `src/issueModel.ts`: hierarchy, classification, legacy normalization and preservation.
+- `src/WorkItems.tsx`, `src/IssueContext.tsx`: independent work, comments, attachments and history.
+- `tests/aria-demo.test.mjs`, `tests/issue-model.test.mjs`: lifecycle, approval, dependencies, preservation and hierarchy checks.
 
 ## Preserved versions
 
 - Current dev: http://127.0.0.1:5173/#issues
-- V1 source: `versions/v1/`; frozen preview: `/v1/index.html` (unchanged).
-- Pre-batch snapshot branch: `snapshots/current-2026-11-27`, commit `53fbdcc`.
-- Batch work branch: `design/next-two-batches`.
-
-The list uses a Label column in place of Created in; source remains on issue details. Existing labels are preserved when changing work type. Each new Aria run captures work type, description, labels, and existing work references as planning context; full label-aware generation remains part of Batch 2.
-
-The issue table now shows Type (Issue / Story / Epic) derived from work type, rather than legacy labels. Existing labels remain stored.
-
-Latest UI refinement: table has a dedicated Priority column with compact tinted High/Medium/Low pills; Awaiting verification is hidden in table rows. Toolbar is search plus Type, with status tabs; source, Epic, Story, label, and grouping controls are removed. Detail status badges have rounded corners and balanced padding. Issue data now lives in React state and resets to initial examples on browser reload, per user request; old stored issue data is left untouched and is no longer loaded or written. This supersedes earlier persistence and filter descriptions.
+- Frozen V1: `versions/v1/`, `/v1/index.html` (unchanged).
+- Original snapshot: `snapshots/current-2026-11-27` at `53fbdcc`.
+- Refined pre-Batch-2 snapshot: `snapshots/pre-batch2-2026-11-27` at `c89c750`.
+- Active branch: `design/next-two-batches`.
